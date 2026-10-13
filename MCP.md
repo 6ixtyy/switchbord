@@ -12,6 +12,19 @@ SwitchBord is a remote MCP server: streamable HTTP, stateless, no auth.
 claude mcp add --transport http switchbord https://switchbord.vercel.app/mcp
 ```
 
+Or install it as a Claude Code plugin (same server, updates with this repo):
+
+```
+/plugin marketplace add 6ixtyy/switchbord
+/plugin install switchbord@switchbord
+```
+
+**Gemini CLI:**
+
+```bash
+gemini extensions install https://github.com/6ixtyy/switchbord
+```
+
 **Claude Desktop and claude.ai:** Settings → Connectors → Add custom connector, then paste the URL above.
 
 **Cursor** (`~/.cursor/mcp.json` or `.cursor/mcp.json` in a project):

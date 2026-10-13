@@ -25,7 +25,9 @@ Most other clients (Cursor, Windsurf, Cline and others that read an `mcpServers`
 { "mcpServers": { "switchbord": { "type": "http", "url": "https://switchbord.vercel.app/mcp" } } }
 ```
 
-Per-client setup (Claude Desktop, VS Code, Cursor): [MCP.md](MCP.md).
+Claude Code plugin: `/plugin marketplace add 6ixtyy/switchbord`, then `/plugin install switchbord@switchbord`. Gemini CLI: `gemini extensions install https://github.com/6ixtyy/switchbord`.
+
+Per-client setup (Claude Desktop, VS Code, Cursor, Gemini CLI): [MCP.md](MCP.md). Listed in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=switchbord) as `io.github.6ixtyy/switchbord`. Privacy: [PRIVACY.md](PRIVACY.md).
 
 | Tool | Use it to |
 |---|---|

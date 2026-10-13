@@ -1,0 +1,14 @@
+{
+  "name": "switchbord",
+  "owner": { "name": "SwitchBord", "url": "https://switchbord.xyz" },
+  "metadata": { "description": "SwitchBord: a free, live router for paid agent APIs (x402, MPP)." },
+  "plugins": [
+    {
+      "name": "switchbord",
+      "source": "./plugins/switchbord",
+      "description": "Find the best working paid API seller (x402, MPP) for a task, checked live, plus backups. Free, no keys; SwitchBord never touches money.",
+      "category": "productivity",
+      "homepage": "https://switchbord.xyz"
+    }
+  ]
+}

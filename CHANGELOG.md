@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-10-13
+- Claude Code plugin marketplace and Gemini CLI extension in this repo. MCP tools have titles and read-only/destructive hints. Privacy page.
+- Listed in the official MCP Registry and on Smithery.
 - `server.json` for the official MCP Registry (`io.github.6ixtyy/switchbord`).
 - Public repo filled: README with MCP and API quick start, per-client MCP setup, `llms.txt`, runnable examples, contributing guide.
 

@@ -1,0 +1,10 @@
+{
+  "name": "switchbord",
+  "version": "0.1.0",
+  "description": "Find the best working paid API seller (x402, MPP) for a task, checked live, plus backups. Free, no keys; SwitchBord never touches money.",
+  "author": { "name": "SwitchBord", "url": "https://switchbord.xyz" },
+  "homepage": "https://switchbord.xyz",
+  "repository": "https://github.com/6ixtyy/switchbord",
+  "license": "MIT",
+  "keywords": ["x402", "mpp", "payments", "agents", "router", "mcp"]
+}

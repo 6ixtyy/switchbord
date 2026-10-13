@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "switchbord": { "type": "http", "url": "https://switchbord.vercel.app/mcp" }
+  }
+}

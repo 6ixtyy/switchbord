@@ -1,0 +1,8 @@
+{
+  "name": "switchbord",
+  "version": "0.1.0",
+  "description": "Free live router for paid agent APIs (x402, MPP): the best working seller for a task, checked live, plus backups.",
+  "mcpServers": {
+    "switchbord": { "httpUrl": "https://switchbord.vercel.app/mcp" }
+  }
+}
