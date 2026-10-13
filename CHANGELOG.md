@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-10-13
+- `server.json` for the official MCP Registry (`io.github.6ixtyy/switchbord`).
 - Public repo filled: README with MCP and API quick start, per-client MCP setup, `llms.txt`, runnable examples, contributing guide.
 
 ## 2026-10-12

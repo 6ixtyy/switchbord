@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.6ixtyy/switchbord",
+  "title": "SwitchBord",
+  "description": "Free live router for paid agent APIs (x402, MPP): the best working seller for a task, plus backups.",
+  "version": "0.1.0",
+  "websiteUrl": "https://switchbord.xyz",
+  "repository": {
+    "url": "https://github.com/6ixtyy/switchbord",
+    "source": "github"
+  },
+  "icons": [
+    { "src": "https://switchbord.xyz/favicon.svg", "mimeType": "image/svg+xml", "sizes": ["any"] },
+    { "src": "https://switchbord.xyz/apple-touch-icon.png", "mimeType": "image/png", "sizes": ["180x180"] }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://switchbord.vercel.app/mcp"
+    }
+  ]
+}
