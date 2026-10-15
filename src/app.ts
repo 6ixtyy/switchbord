@@ -12,6 +12,7 @@ import { buildInventory, loadInventory, saveInventory } from "./inventory.ts";
 import * as store from "./store.ts";
 import * as history from "./history.ts";
 import * as usage from "./usage.ts";
+import { dashboardHtml } from "./dashboard.ts";
 import { waitUntil } from "@vercel/functions";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./mcp-tools.ts";
@@ -163,7 +164,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     await maybeRefresh().catch((e) => console.error("refresh failed", e));
     if (url.pathname === "/cron/daily") return send(res, 200, await daily(req));
     if (url.pathname === "/cron/sample") return send(res, 200, await sample(req));
-    if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type" }); return res.end(); }
+    if (req.method === "OPTIONS") { res.writeHead(204, { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type, authorization" }); return res.end(); }
     if (url.pathname === "/route") {
       const r = routeRequest(req.method === "POST" ? await readJson(req) : Object.fromEntries(url.searchParams));
       if (!r.task && !r.market) return send(res, 400, { error: "give a task (plain words) or a market id" });
@@ -171,6 +172,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       log("route", "http", { task: r.task, market: r.market, mode: out.mode, results: out.candidates.length });
       return send(res, 200, out);
     }
+    if (url.pathname === "/dashboard") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(dashboardHtml); }
     if (url.pathname === "/stats") {
       const secret = process.env.CRON_SECRET;
       if (!secret || req.headers.authorization !== `Bearer ${secret}`) return send(res, 401, { error: "usage stats are private: send Authorization: Bearer <CRON_SECRET>" });
