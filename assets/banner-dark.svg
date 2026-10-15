@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 378" width="1200" height="378" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" role="img" aria-label="SwitchBord: the live router for paid agent APIs. An agent asks for a task; SwitchBord checks sellers live and returns the best one plus backups.">
+<defs><pattern id="g" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#16222a" stroke-width="1"/></pattern></defs>
+<rect width="1200" height="378" fill="#0a0f12"/>
+<rect width="1200" height="378" fill="url(#g)"/>
+<rect x="0.5" y="0.5" width="1199" height="377" fill="none" stroke="#25343c"/>
+<g transform="translate(64 78) scale(1.5)"><circle cx="7" cy="24" r="3.5" fill="none" stroke="#d9e4e9" stroke-width="3.4"/><path d="M10.5 24H19M29 24C35 24 35 10 41 10M29 24H41M29 24C35 24 35 38 41 38" fill="none" stroke="#d9e4e9" stroke-width="3.4"/><rect x="19" y="19" width="10" height="10" fill="#d9e4e9"/><circle cx="42" cy="10" r="4.8" fill="#33bdec"/><circle cx="42" cy="24" r="3.6" fill="#d9e4e9"/><circle cx="42" cy="38" r="3.6" fill="#d9e4e9"/></g>
+<text x="152" y="128" fill="#d9e4e9" font-size="46" font-weight="700" letter-spacing="-1">SwitchBord</text>
+<text x="66" y="196" fill="#d9e4e9" font-size="20">The live router for paid agent APIs.</text>
+<text x="66" y="232" fill="#7f8f97" font-size="15">Ask for a task. Get the sellers that work, cheapest</text>
+<text x="66" y="256" fill="#7f8f97" font-size="15">and fastest right now, plus backups.</text>
+<g font-size="12" letter-spacing="1.5">
+<rect x="66" y="290" width="62" height="28" fill="#0e3343" stroke="#33bdec"/><text x="78" y="309" fill="#33bdec">X402</text>
+<rect x="138" y="290" width="54" height="28" fill="#0e3343" stroke="#33bdec"/><text x="150" y="309" fill="#33bdec">MPP</text>
+<rect x="202" y="290" width="62" height="28" fill="none" stroke="#25343c"/><text x="214" y="309" fill="#7f8f97">FREE</text>
+<rect x="274" y="290" width="194" height="28" fill="none" stroke="#25343c"/><text x="286" y="309" fill="#7f8f97">NEVER TOUCHES MONEY</text>
+</g>
+<rect x="560" y="166" width="96" height="46" fill="#10171b" stroke="#25343c"/>
+<text x="608" y="194" fill="#d9e4e9" font-size="14" text-anchor="middle">agent</text>
+<path d="M656 189H742" stroke="#d9e4e9" stroke-width="2.4"/>
+<text x="699" y="177" fill="#7f8f97" font-size="11" text-anchor="middle">task</text>
+<rect x="742" y="171" width="36" height="36" fill="#d9e4e9"/>
+<text x="760" y="235" fill="#7f8f97" font-size="11" text-anchor="middle" letter-spacing="1.5">ROUTE</text>
+<path d="M778 189 C830 189 820 96 872 96 H908" fill="none" stroke="#33bdec" stroke-width="3" /><circle cx="918" cy="96" r="7" fill="#33bdec"/><text x="940" y="93" fill="#d9e4e9" font-size="14">seller · 264ms · $0.010</text><text x="940" y="111" fill="#33bdec" font-size="11" letter-spacing="1.5">BEST · CHECKED LIVE</text><path d="M778 189 C830 189 820 158 872 158 H908" fill="none" stroke="#7f8f97" stroke-width="2" /><circle cx="918" cy="158" r="5" fill="#7f8f97"/><text x="940" y="155" fill="#d9e4e9" font-size="14">seller · 217ms · $0.001</text><text x="940" y="173" fill="#7f8f97" font-size="11" letter-spacing="1.5">BACKUP</text><path d="M778 189 C830 189 820 220 872 220 H908" fill="none" stroke="#7f8f97" stroke-width="2" /><circle cx="918" cy="220" r="5" fill="#7f8f97"/><text x="940" y="217" fill="#d9e4e9" font-size="14">seller · 253ms · $0.009</text><text x="940" y="235" fill="#7f8f97" font-size="11" letter-spacing="1.5">BACKUP</text><path d="M778 189 C830 189 820 282 872 282 H908" fill="none" stroke="#ff6052" stroke-width="2" stroke-dasharray="5 6"/><path d="M912 276l12 12M924 276l-12 12" stroke="#ff6052" stroke-width="2.4"/><text x="940" y="279" fill="#7f8f97" font-size="14">seller · no answer</text><text x="940" y="297" fill="#ff6052" font-size="11" letter-spacing="1.5">DROPPED</text>
+<text x="1136" y="352" fill="#7f8f97" font-size="12" text-anchor="end">switchbord.xyz</text>
+</svg>

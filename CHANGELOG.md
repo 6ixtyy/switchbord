@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-15
+- Open source under MIT: the service code (`src/`), the site (`site/`) and build scripts are now published here alongside the docs. Run your own copy with `npm ci && npm run inventory && npm start`.
+- New README with a quick start, a real example answer and a self-hosting guide. Pull requests welcome ([CONTRIBUTING.md](CONTRIBUTING.md)).
+
 ## 2026-10-13
 - Claude Code plugin marketplace and Gemini CLI extension in this repo. MCP tools have titles and read-only/destructive hints. Privacy page.
 - Listed in the official MCP Registry and on Smithery.

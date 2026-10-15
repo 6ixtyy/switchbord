@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<meta name="description" content="SwitchBord: a free, live router for paid agent APIs (x402 and MPP). Your agent asks, SwitchBord returns the best sellers checked live, your agent pays them directly.">
+<link rel="icon" href="/favicon.ico?v=2" sizes="any">
+<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<title>SwitchBord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow monospace column, a light ctOS-style HUD. Panels are corner-bracket frames on a faint grid; one cold accent, red only for "down". Light-only by design. */
+:root{
+  --bg:#eceff1; --panel:#f6f8f9; --ink:#0d1317; --muted:#5f6b73; --line:#c3cbd1; --grid:#dfe4e8;
+  --accent:#0074a6; --accent-soft:#d6ecf5; --down:#c42a20; --down-soft:#f7dfdc;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --scan:rgba(13,19,23,.018);
+  color-scheme:light;
+}
+/* night mode: ctOS after dark. Set by the toggle on <html data-mode>, independent of the host's theme */
+:root[data-mode="dark"]{
+  --bg:#0a0f12; --panel:#10171b; --ink:#d9e4e9; --muted:#7f8f97; --line:#25343c; --grid:#131d22;
+  --accent:#33bdec; --accent-soft:#0e3343; --down:#ff6052; --down-soft:#3b1815;
+  --scan:rgba(120,200,235,.025);
+  color-scheme:dark;
+}
+html{transition:background-color .2s}
+/* mode toggle */
+.top-right{display:flex;align-items:center;gap:20px}
+.mode{display:inline-flex;align-items:center;gap:8px;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:4px 0}
+.mode:hover{color:var(--accent)}
+.mode-track{position:relative;width:34px;height:16px;border:1px solid var(--line);background:var(--panel)}
+.mode-track i{position:absolute;top:2px;left:2px;width:10px;height:10px;background:var(--ink);transition:transform .25s cubic-bezier(.6,0,.2,1),background .25s}
+:root[data-mode="dark"] .mode-track i{transform:translateX(18px);background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.mode-label{min-width:5ch;text-align:left}
+/* the switch: new palette wipes down the screen behind a scan line */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){animation:wipe .6s cubic-bezier(.6,0,.2,1)}
+@keyframes wipe{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+.sweep{position:fixed;left:0;right:0;top:0;height:2px;background:var(--accent);box-shadow:0 0 14px 2px var(--accent);z-index:99;pointer-events:none;animation:sweep .6s cubic-bezier(.6,0,.2,1) forwards}
+@keyframes sweep{from{transform:translateY(0)}to{transform:translateY(100vh);opacity:.2}}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  background-color:var(--bg);
+  background-image:
+    repeating-linear-gradient(0deg,transparent 0 2px,var(--scan) 2px 3px),
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:auto,32px 32px,32px 32px;
+  color:var(--ink);font-family:var(--f-mono);font-size:14px;line-height:1.6;
+  padding-inline:16px;padding-block:0;
+}
+.wrap{max-width:820px;margin-inline:auto}
+a{color:inherit}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0;padding:0}
+.muted{color:var(--muted)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* corner-bracket frame */
+.frame{
+  --c:var(--ink);--s:10px;position:relative;background-color:var(--panel);
+  background-image:
+    linear-gradient(var(--c),var(--c)),linear-gradient(var(--c),var(--c)),
+    linear-gradient(var(--c),var(--c)),linear-gradient(var(--c),var(--c)),
+    linear-gradient(var(--c),var(--c)),linear-gradient(var(--c),var(--c)),
+    linear-gradient(var(--c),var(--c)),linear-gradient(var(--c),var(--c));
+  background-repeat:no-repeat;
+  background-size:var(--s) 1px,1px var(--s),var(--s) 1px,1px var(--s),var(--s) 1px,1px var(--s),var(--s) 1px,1px var(--s);
+  background-position:left top,left top,right top,right top,left bottom,left bottom,right bottom,right bottom;
+}
+.frame.acc-frame{--c:var(--accent)}
+.tag{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+
+/* top */
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:22px}
+.brand{font-weight:700;letter-spacing:.14em;text-decoration:none;display:flex;align-items:center;gap:10px}
+/* route mark: agent -> SwitchBord -> sellers, best one lit */
+.logo{width:24px;height:24px;flex:none}
+.logo .i{stroke:var(--ink);fill:none;stroke-width:2.5}
+.logo .if{fill:var(--ink)}
+.logo .af{fill:var(--accent)}
+:root[data-mode="dark"] .logo .af{filter:drop-shadow(0 0 3px var(--accent))}
+.top nav{display:flex;gap:16px;font-size:.78rem;color:var(--muted)}
+.top nav a{text-decoration:none}.top nav a:hover{color:var(--accent)}
+@media (max-width:620px){.top nav{display:none}}
+
+/* hero */
+.hero{padding-block:40px 28px;display:grid;gap:18px}
+.hero h1{font-size:clamp(1.5rem,4.6vw,2.3rem);font-weight:700;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+.hero h1 .cur{display:inline-block;width:.55em;height:.9em;background:var(--accent);vertical-align:-.08em;margin-left:.15em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.tags{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0;padding:0}
+.tags li{border:1px solid var(--line);padding:2px 8px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;background:var(--panel)}
+.hud{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.hud b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;margin-left:6px}
+.ctas{display:flex;flex-wrap:wrap;gap:6px 28px}
+/* hancore-style text commands: no boxes, a prompt glyph, underline on hover */
+.cmd{display:inline-flex;align-items:baseline;gap:8px;text-decoration:none;font-size:.9rem;font-weight:500;padding-block:2px}
+.cmd::before{content:"›";color:var(--accent);font-weight:700;transition:transform .15s}
+.cmd:hover{color:var(--accent)}
+.cmd:hover::before{transform:translateX(3px)}
+.cmd span,.cmd{text-underline-offset:4px}
+.cmd:hover{text-decoration:underline 1px}
+#connect .copy,#how .copy{border:0;background:none;padding:2px 4px;color:var(--muted);text-transform:lowercase;letter-spacing:.02em}
+#connect .copy::before{content:"["}
+#connect .copy::after{content:"]"}
+#connect .copy:hover{color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:1px solid var(--ink);text-decoration:none;font-size:.82rem;font-weight:500;letter-spacing:.04em;background:var(--panel)}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary:hover{background:var(--accent);color:var(--panel)}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* node graph */
+.graph{padding:14px 14px 10px}
+.graph-head{display:flex;justify-content:space-between;gap:12px;color:var(--muted)}
+.graph svg{display:block;width:100%;height:auto;margin-top:6px}
+.graph text{font-family:var(--f-mono);font-size:12px;fill:var(--muted);letter-spacing:.06em}
+.graph .lbl-strong{fill:var(--ink);font-weight:700}
+.graph .edge{stroke:var(--line);stroke-width:1;fill:none}
+/* the map is always live: slow idle flow, fast while a request runs, lit lanes after results */
+.graph .flow{stroke:var(--accent);stroke-width:1.5;fill:none;stroke-dasharray:3 9;opacity:.75;animation:flow 1.2s linear infinite}
+.graph .flow.off{opacity:0}
+.graph .flow.best{opacity:1;stroke-width:2;animation-duration:.8s}
+.graph.running .flow{opacity:1;animation-duration:.55s}
+.graph .packet{fill:var(--accent)}
+@keyframes flow{to{stroke-dashoffset:-12}}
+.graph .node{fill:var(--panel);stroke:var(--ink);stroke-width:1}
+.graph .hub{fill:var(--ink)}
+.graph .ring{fill:none;stroke:var(--accent);stroke-width:1;opacity:0;transform-box:fill-box;transform-origin:center;animation:ring 2.6s ease-out infinite}
+.graph.running .ring{animation-duration:1s}
+@keyframes ring{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.6)}}
+.graph .s-node{fill:var(--panel);stroke:var(--line)}
+.graph .s-node.up{fill:var(--accent);stroke:var(--accent)}
+.graph .s-node.down{fill:var(--down);stroke:var(--down)}
+.graph .s-node.na{fill:var(--panel);stroke:var(--muted)}
+/* lit lanes stay a pale track so the moving dashes on top stay visible */
+.graph .s-edge.on{stroke:var(--accent-soft);stroke-width:2}
+
+/* sections */
+section.sec{padding-block:44px 8px}
+.label{font-size:.82rem;font-weight:700;letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.label::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* demo */
+.console form{padding:16px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
+.task-row{display:flex;gap:10px}
+.prompt{position:relative;flex:1;min-width:0;display:flex;align-items:center;border:1px solid var(--line);background:var(--bg)}
+.prompt:focus-within{border-color:var(--accent)}
+.prompt::before{content:"›";padding-left:12px;color:var(--accent);font-weight:700}
+#task{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:.95rem;color:var(--ink);padding:9px 10px 9px 8px;caret-color:var(--accent);outline:none}
+.fake-cur{position:absolute;top:50%;width:.6em;height:1.1em;margin-top:-.55em;background:var(--accent);pointer-events:none;animation:blink 1s steps(1) infinite;font-size:.95rem}
+.prompt:focus-within .fake-cur{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:.74rem;padding:3px 9px;border:1px solid var(--line);background:var(--panel)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.opts label{display:grid;gap:4px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+select,input[type=number]{font:inherit;font-size:.82rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:0;padding:7px 9px;width:100%}
+select:focus,input[type=number]:focus{border-color:var(--accent);outline:none}
+.result-head{padding:12px 16px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;border-bottom:1px solid var(--line);min-height:46px;font-size:.84rem}
+.result-head .msg{font-weight:500}
+.result-head .msg::before{content:"› ";color:var(--accent)}
+.group{padding:8px 16px;font-size:.72rem;font-weight:700;letter-spacing:.12em;color:var(--muted);border-block:1px solid var(--line)}
+.results{list-style:none;margin:0;padding:12px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.card{padding:14px;display:grid;gap:8px;min-width:0}
+.card-top{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.card-top .tag{color:var(--muted)}
+.best-tag{background:var(--accent);color:var(--panel);padding:1px 7px;font-size:.68rem;font-weight:700;letter-spacing:.1em}
+.card h3{font-size:1rem;font-weight:700;overflow-wrap:anywhere}
+.desc{color:var(--muted);font-size:.8rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.stats{display:flex;flex-wrap:wrap;gap:2px 0;font-size:.74rem;letter-spacing:.04em;text-transform:uppercase}
+.stats > span:not(:last-child)::after{content:"·";margin:0 8px;color:var(--muted)}
+.stats .k{color:var(--muted)}
+.stats .v{font-weight:700;font-variant-numeric:tabular-nums}
+.v.up{color:var(--accent)} .v.down{color:var(--down);background:var(--down-soft);padding:0 4px}
+.badges{display:flex;flex-wrap:wrap;gap:4px}
+.badge{font-size:.68rem;padding:0 6px;max-width:100%;overflow-wrap:anywhere;border:1px solid var(--line);color:var(--muted)}
+.urlrow{display:flex;gap:6px;min-width:0}
+.urlrow code{font-family:var(--f-mono);font-size:.74rem;border:1px solid var(--line);background:var(--bg);padding:3px 8px;overflow-x:auto;white-space:nowrap;min-width:0;flex:1}
+.copy{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border:1px solid var(--line);background:var(--panel);white-space:nowrap}
+.copy:hover{border-color:var(--accent);color:var(--accent)}
+.empty{padding:28px 16px;color:var(--muted);font-size:.84rem}
+.empty strong{display:block;color:var(--ink);margin-bottom:4px}
+.loading{padding:16px;display:grid;gap:10px}
+.scanbar{height:2px;background:var(--line);position:relative;overflow:hidden}
+.scanbar::after{content:"";position:absolute;inset:0;width:30%;background:var(--accent);animation:scan 1.1s ease-in-out infinite}
+@keyframes scan{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+.skel{height:84px;border:1px dashed var(--line)}
+.err{padding:16px;color:var(--down);display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:.84rem}
+/* demo pipeline: ask -> check live -> rank -> results */
+.pipe{list-style:none;margin:0;padding:12px 16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-bottom:1px solid var(--line);counter-reset:st}
+.pipe li{position:relative;display:flex;align-items:center;gap:8px;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);min-width:0}
+.pipe li::before{counter-increment:st;content:counter(st);flex:none;width:20px;height:20px;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel);font-weight:700;transition:background .25s,border-color .25s,color .25s}
+.pipe li:not(:last-child)::after{content:"";flex:1;height:1px;margin-right:8px;background:linear-gradient(90deg,var(--accent) var(--fill,0%),var(--line) var(--fill,0%))}
+.pipe li.active{color:var(--accent)}
+.pipe li.active::before{border-color:var(--accent);color:var(--accent);animation:pulse 1s ease-in-out infinite}
+.pipe li.done{color:var(--ink)}
+.pipe li.done::before{content:"✓";background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.pipe li.done::after{--fill:100%;background:var(--accent)}
+.pipe li.fail::before{content:"!";background:var(--down);border-color:var(--down);color:var(--panel)}
+@keyframes pulse{50%{box-shadow:0 0 0 4px var(--accent-soft)}}
+@media (max-width:560px){.pipe li span{display:none}.pipe li.active span,.pipe li:last-child span{display:inline}}
+.log{margin:0;font-family:var(--f-mono);font-size:.76rem;line-height:1.7;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;min-height:5.2em}
+.log .ln{display:block;animation:lnIn .25s both}
+.log .ln::before{content:"› ";color:var(--accent)}
+.log .ok{color:var(--accent)}
+@keyframes lnIn{from{opacity:0;transform:translateX(-6px)}}
+.reqline{display:flex;gap:6px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);font-size:.72rem;min-width:0}
+.reqline code{font-family:var(--f-mono);color:var(--muted);overflow-x:auto;white-space:nowrap;min-width:0;flex:1}
+.reqline code b{color:var(--accent);font-weight:700}
+.card{animation:cardIn .4s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d,0ms);transition:transform .15s}
+.card:hover{transform:translateX(3px)}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}}
+.lat{height:3px;background:var(--grid);position:relative;overflow:hidden}
+.lat i{position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--accent);animation:grow .7s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--d,0ms) + 150ms)}
+.lat.down i{background:var(--down)}
+@keyframes grow{from{width:0}}
+/* compact backup rows */
+.group .muted{font-weight:400;letter-spacing:.04em;text-transform:none}
+.minis{list-style:none;margin:0;padding:4px 16px 12px;display:grid;grid-template-columns:minmax(0,1fr)}
+.mini{border-bottom:1px dashed var(--line);animation:cardIn .35s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d,0ms)}
+.mini:last-child{border-bottom:0}
+.mini summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:4ch minmax(0,1fr) auto 7ch 1ch;gap:12px;align-items:baseline;padding:8px 2px;font-size:.8rem}
+.mini summary::-webkit-details-marker{display:none}
+.mini summary::after{content:"+";color:var(--muted);text-align:right}
+.mini details[open] summary::after{content:"−"}
+.mini summary:hover .m-name{color:var(--accent)}
+.m-rank{color:var(--muted)}
+.m-name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-st{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.m-st::before{content:"";width:6px;height:6px;background:var(--muted)}
+.m-st.up::before{background:var(--accent)}
+.m-st.down{color:var(--down)}.m-st.down::before{background:var(--down)}
+.m-price{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.m-body{display:grid;gap:8px;padding:2px 2px 12px calc(4ch + 12px);min-width:0}
+@media (max-width:560px){.minis{padding:4px 10px 10px}.m-body{padding-left:2px}.mini summary{grid-template-columns:3.5ch minmax(0,1fr) auto 6ch 1ch;gap:8px}}
+.lat-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.66rem;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+
+/* how */
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.steps li{display:grid;grid-template-columns:3ch minmax(0,1fr);gap:12px}
+.steps .n{color:var(--accent);font-weight:700}
+
+/* markets */
+.markets{padding:14px 16px 10px}
+.mk-head{display:flex;justify-content:space-between;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--line)}
+.mk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px}
+@media (max-width:640px){.mk-grid{grid-template-columns:minmax(0,1fr)}}
+.mkt{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 12px;align-items:baseline;text-align:left;padding:10px 2px 9px;border-bottom:1px dashed var(--line);min-width:0;font-size:.82rem;animation:cardIn .4s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d,0ms)}
+.mk-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:transform .15s,color .15s}
+.mkt b{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mk-bar{grid-column:1/-1;height:2px;background:var(--grid);position:relative;overflow:hidden}
+.mk-bar i{position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--line);animation:grow .8s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--d,0ms) + 120ms);transition:background .15s}
+.mk-run{position:absolute;right:2px;top:10px;font-size:.72rem;color:var(--accent);background:var(--panel);padding-left:8px;opacity:0;transform:translateX(-4px);transition:opacity .15s,transform .15s}
+.mkt:hover .mk-title,.mkt:focus-visible .mk-title{color:var(--accent);transform:translateX(4px)}
+.mkt:hover .mk-bar i,.mkt:focus-visible .mk-bar i{background:var(--accent)}
+.mkt:hover .mk-run,.mkt:focus-visible .mk-run{opacity:1;transform:none}
+.mkt:hover b,.mkt:focus-visible b{visibility:hidden}
+.note{color:var(--muted);font-size:.8rem;margin-top:10px}
+
+/* connect */
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tab{padding:9px 16px;font-size:.8rem;font-weight:500;color:var(--muted);text-transform:lowercase}
+.tab::before{content:"  ";white-space:pre}
+.tab[aria-selected="true"]{color:var(--ink)}
+.tab[aria-selected="true"]::before{content:"› ";color:var(--accent)}
+.tab:hover{color:var(--accent)}
+.panel{padding:16px;display:grid;gap:10px}
+.code{position:relative;border:1px solid var(--line);background:var(--bg);min-width:0}
+.code pre{margin:0;padding:12px 14px;overflow-x:auto;font-family:var(--f-mono);font-size:.76rem;line-height:1.6}
+.code .copy{position:absolute;top:6px;right:6px}
+.code-label{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tools{list-style:none;margin:0;padding:0;font-size:.8rem;display:grid;gap:2px}
+.tools code{font-family:var(--f-mono);color:var(--accent)}
+.wallet{margin-top:12px;font-size:.82rem}
+.wallet::before{content:"! ";color:var(--accent);font-weight:700}
+
+
+/* footer */
+footer{margin-top:56px;border-top:1px solid var(--line);padding-block:20px 40px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 24px;font-size:.74rem;color:var(--muted)}
+.status{display:flex;align-items:center;gap:8px;color:var(--ink);text-transform:uppercase;letter-spacing:.08em}
+.dot{width:8px;height:8px;background:var(--muted)}
+.dot.ok{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dot.bad{background:var(--down);box-shadow:0 0 0 3px var(--down-soft)}
+.foot-urls{display:grid;gap:2px;min-width:0}
+.foot-urls span{overflow-wrap:anywhere}
+
+@media (max-width:560px){
+  .task-row{flex-direction:column}
+  .results{padding:10px}
+  .card{padding:12px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<script>try{if(localStorage.getItem("sb-mode")==="dark")document.documentElement.dataset.mode="dark"}catch(e){}</script>
+
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#top" id="top"><svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><circle class="i" cx="7" cy="24" r="3.5"/><path class="i" d="M10.5 24H19"/><rect class="if" x="19" y="19" width="10" height="10"/><path class="i" d="M29 24C35 24 35 10 41 10M29 24H41M29 24C35 24 35 38 41 38"/><circle class="af" cx="42" cy="10" r="3.8"/><circle class="if" cx="42" cy="24" r="3"/><circle class="if" cx="42" cy="38" r="3"/></svg>SWITCHBORD</a>
+    <div class="top-right">
+      <nav aria-label="Sections"><a href="#demo">demo</a><a href="#how">how</a><a href="#markets">markets</a><a href="#connect">connect</a></nav>
+      <button type="button" class="mode" id="mode" aria-pressed="false" aria-label="Dark mode"><span class="mode-track" aria-hidden="true"><i></i></span><span class="mode-label" id="mode-label">light</span></button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1><span id="h1-text">Live router for paid agent APIs</span><span class="cur" aria-hidden="true"></span></h1>
+    <ul class="tags"><li>free</li><li>no signup</li><li>never touches your money</li></ul>
+    <div class="hud" aria-live="polite">
+      <span>endpoints<b id="c-endpoints">—</b></span>
+      <span>markets<b id="c-markets">—</b></span>
+      <span>updated<b id="c-updated">—</b></span>
+    </div>
+    <div class="ctas">
+      <a class="cmd" href="#demo">try it</a>
+      <a class="cmd" href="#connect">connect your agent</a>
+    </div>
+    <div class="frame graph" id="graph" aria-hidden="true">
+      <div class="graph-head tag"><span>[ ROUTE MAP ]</span><span id="graph-cap">idle</span></div>
+      <svg viewBox="0 0 510 150" preserveAspectRatio="xMidYMid meet">
+        <path class="edge" d="M52 75 H229"/>
+        <path class="flow" d="M52 75 H229"/>
+        <g id="s-edges"></g>
+        <g id="s-packets"></g>
+        <circle class="node" cx="44" cy="75" r="8"/>
+        <text x="44" y="102" text-anchor="middle" class="lbl-strong">AGENT</text>
+        <circle class="ring" cx="240" cy="75" r="11"/>
+        <rect class="hub" x="229" y="64" width="22" height="22"/>
+        <text x="240" y="108" text-anchor="middle" class="lbl-strong">SWITCHBORD</text>
+        <g id="s-nodes"></g>
+      </svg>
+    </div>
+  </section>
+
+  <section class="sec" id="demo">
+    <h2 class="label">// DEMO</h2>
+    <div class="frame console">
+      <form id="route-form" autocomplete="off">
+        <div class="task-row">
+          <label for="task" class="vh">What does your agent need?</label>
+          <div class="prompt">
+            <input id="task" name="task" type="text" value="search the web" placeholder="what does your agent need?" spellcheck="false">
+            <span class="fake-cur" id="fake-cur" aria-hidden="true"></span>
+          </div>
+          <button class="btn primary" type="submit" id="go">Find sellers</button>
+        </div>
+        <div class="chips" id="chips">
+          <button type="button" class="chip" data-task="search the web">search the web</button>
+          <button type="button" class="chip" data-task="ETH price">ETH price</button>
+          <button type="button" class="chip" data-task="scrape a page">scrape a page</button>
+          <button type="button" class="chip" data-task="generate an image">generate an image</button>
+        </div>
+        <div class="opts">
+          <label for="accepts">payment method
+            <select id="accepts">
+              <option value="any">any</option>
+              <option value="x402:base:usdc">x402:base:usdc</option>
+              <option value="x402:solana:usdc">x402:solana:usdc</option>
+              <option value="mpp:tempo">mpp:tempo</option>
+              <option value="mpp:stripe">mpp:stripe</option>
+            </select>
+          </label>
+          <label for="max-price">max price (usd)
+            <input id="max-price" type="number" min="0" step="0.001" inputmode="decimal" placeholder="0.05">
+          </label>
+        </div>
+      </form>
+      <ol class="pipe" id="pipe" aria-hidden="true">
+        <li data-step="ask"><span>ask</span></li>
+        <li data-step="check"><span>check live</span></li>
+        <li data-step="rank"><span>rank</span></li>
+        <li data-step="done"><span>results</span></li>
+      </ol>
+      <div class="result-head" id="result-head" aria-live="polite"><span class="muted">results appear here</span></div>
+      <div id="results"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="how">
+    <h2 class="label">// HOW IT WORKS</h2>
+    <ol class="steps">
+      <li><span class="n">01</span><span>Your agent asks for a task, e.g. “search the web”.</span></li>
+      <li><span class="n">02</span><span>SwitchBord returns the best sellers, checked live, plus backups.</span></li>
+      <li><span class="n">03</span><span>Your agent pays the seller directly with its own wallet and x402 or MPP client.</span></li>
+    </ol>
+  </section>
+
+  <section class="sec" id="markets">
+    <h2 class="label">// MARKETS</h2>
+    <div class="frame markets" id="market-list"><p class="note">loading markets…</p></div>
+    <p class="note">Click a market to run it in the demo.</p>
+  </section>
+
+  <section class="sec" id="connect">
+    <h2 class="label">// CONNECT</h2>
+    <div class="frame console">
+      <div class="tabs" role="tablist" aria-label="Connection method">
+        <button class="tab" role="tab" id="tab-mcp" aria-controls="panel-mcp" aria-selected="true">MCP</button>
+        <button class="tab" role="tab" id="tab-http" aria-controls="panel-http" aria-selected="false" tabindex="-1">HTTP</button>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-mcp" aria-labelledby="tab-mcp">
+        <p class="code-label">server · streamable http · no auth</p>
+        <div class="code"><pre id="code-mcp-url">https://switchbord.vercel.app/mcp</pre><button class="copy" data-copy="code-mcp-url">Copy</button></div>
+        <p class="code-label">client config</p>
+        <div class="code"><pre id="code-mcp-json">{
+  "mcpServers": {
+    "switchbord": {
+      "type": "http",
+      "url": "https://switchbord.vercel.app/mcp"
+    }
+  }
+}</pre><button class="copy" data-copy="code-mcp-json">Copy</button></div>
+        <ul class="tools">
+          <li><code>find_paid_endpoint</code> <span class="muted">best sellers + backups</span></li>
+          <li><code>list_markets</code> <span class="muted">markets and seller counts</span></li>
+          <li><code>report_result</code> <span class="muted">optional</span></li>
+        </ul>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-http" aria-labelledby="tab-http" hidden>
+        <p class="code-label">find sellers</p>
+        <div class="code"><pre id="code-http-get">curl "https://switchbord.vercel.app/route?task=search%20the%20web&amp;accepts=x402:base:usdc&amp;max_price=0.05"</pre><button class="copy" data-copy="code-http-get">Copy</button></div>
+        <p class="code-label">report a result · optional</p>
+        <div class="code"><pre id="code-http-post">curl -X POST https://switchbord.vercel.app/report \
+  -H "content-type: application/json" \
+  -d '{"endpointId":"&lt;id&gt;","outcome":"ok","ms":420,"tx":"&lt;tx hash&gt;","network":"eip155:8453"}'</pre><button class="copy" data-copy="code-http-post">Copy</button></div>
+      </div>
+    </div>
+    <p class="wallet">Your agent needs its own x402 or MPP client and wallet to pay sellers.</p>
+  </section>
+
+
+  <footer>
+    <div class="status"><span class="dot" id="status-dot"></span><span id="status-text">checking api…</span></div>
+    <div class="foot-urls">
+      <span>API https://switchbord.vercel.app</span>
+      <span>MCP https://switchbord.vercel.app/mcp</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const API = "https://switchbord.vercel.app";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const marketTitles = {};
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* text scramble: settles left to right; skipped for reduced motion */
+  const GLYPHS = "!<>-_/[]{}=+*^?#01";
+  function scramble(el, text){
+    if (!el) return;
+    text = text ?? el.textContent;
+    if (reduced){ el.textContent = text; return; }
+    const dur = 420, start = performance.now();
+    (function tick(now){
+      const p = Math.min(1, Math.max(0, (now - start) / dur)), n = Math.floor(p * text.length);
+      let out = text.slice(0, n);
+      for (let i = n; i < text.length; i++) out += text[i] === " " ? " " : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      el.textContent = out;
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = text;
+    })(start);
+  }
+
+  function ago(iso){
+    const t = Date.parse(iso); if (!t) return "—";
+    const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (m < 60) return m <= 1 ? "just now" : m + " min ago";
+    const h = Math.round(m / 60);
+    return h === 1 ? "1 hour ago" : h + " hours ago";
+  }
+  function money(v){
+    if (typeof v !== "number") return "—";
+    if (v >= 0.01) return "$" + v.toFixed(2);
+    return "$" + Number(v.toPrecision(2)).toString();
+  }
+  async function getJSON(path, ms){
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms || 20000);
+    try {
+      const r = await fetch(API + path, {signal: ctl.signal});
+      let body = null; try { body = await r.json(); } catch(e) {}
+      if (!r.ok) throw new Error((body && body.error) || ("HTTP " + r.status));
+      return body;
+    } finally { clearTimeout(t); }
+  }
+  async function copyText(text, btn){
+    const done = (ok) => { if (!btn) return; const o = btn.dataset.label || btn.textContent; btn.dataset.label = o; btn.textContent = ok ? "Copied" : "Select & copy"; setTimeout(() => btn.textContent = o, 1400); };
+    try { await navigator.clipboard.writeText(text); done(true); }
+    catch(e){
+      const pre = btn && btn.parentElement.querySelector("pre,code");
+      if (pre){ const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+      done(false);
+    }
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-copy]"); if (!b) return;
+    copyText($(b.dataset.copy).textContent, b);
+  });
+
+  /* block cursor at the end of the task text while the input is idle (monospace: one cell per char) */
+  function placeCursor(){
+    const inp = $("task"), cur = $("fake-cur");
+    const w = cur.offsetWidth || 9;
+    const x = inp.offsetLeft + 8 + w * inp.value.length + 1;
+    cur.hidden = x + w > inp.offsetLeft + inp.clientWidth;
+    cur.style.left = x + "px";
+  }
+  $("task").addEventListener("input", placeCursor);
+  addEventListener("resize", placeCursor);
+  if (document.fonts) document.fonts.ready.then(placeCursor);
+
+  /* node graph: agent -> SwitchBord -> up to 5 sellers; always live, faster while a request runs */
+  const graph = (function(){
+    const g = $("graph"), edges = $("s-edges"), nodes = $("s-nodes"), packets = $("s-packets");
+    const ys = [19, 47, 75, 103, 131];
+    const lane = (y) => `M251 75 C 330 75, 360 ${y}, 420 ${y}`;
+    /* packets ride the whole route, agent to seller; mode: idle | running | result */
+    function travel(mode, states){
+      if (reduced){ packets.innerHTML = ""; return; }
+      packets.innerHTML = ys.map((y, i) => {
+        if (mode === "result" && !(states && states[i])) return "";
+        const best = mode === "result" && i === 0;
+        const dur = mode === "running" ? 1.1 : best ? 1.6 : 2.6;
+        const begin = (-(mode === "running" ? i * 0.22 : i * 0.64)).toFixed(2);
+        return `<circle class="packet" r="${best ? 3.4 : 2.4}"><animateMotion dur="${dur}s" begin="${begin}s" repeatCount="indefinite" path="M52 75 H251 C 330 75, 360 ${y}, 420 ${y}"/></circle>`;
+      }).join("");
+    }
+    function draw(states, mode){
+      edges.innerHTML = ys.map((y, i) => {
+        const lit = states && states[i];
+        const flow = states ? (lit ? (i === 0 ? " best" : "") : " off") : "";
+        return `<path class="edge s-edge${lit ? " on" : ""}" d="${lane(y)}"/><path class="flow${flow}" d="${lane(y)}"/>`;
+      }).join("");
+      travel(mode || "idle", states);
+      nodes.innerHTML = ys.map((y, i) => {
+        const s = states && states[i];
+        const lbl = s ? (i === 0 ? "#1 BEST" : "#" + (i + 1)) : "SELLER";
+        return `<circle class="s-node ${s || ""}" cx="428" cy="${y}" r="6"/><text x="440" y="${y + 4}" class="${i === 0 && s ? "lbl-strong" : ""}">${lbl}</text>`;
+      }).join("");
+    }
+    draw(null);
+    return {
+      start(){ g.classList.add("running"); draw(null, "running"); $("graph-cap").textContent = "checking sellers live"; },
+      result(cands){
+        g.classList.remove("running");
+        const st = ys.map((_, i) => {
+          const c = cands[i];
+          return !c ? null : (!c.health || typeof c.health.ok !== "boolean") ? "na" : c.health.ok ? "up" : "down";
+        });
+        draw(cands.length ? st : null, cands.length ? "result" : "idle");
+        const up = cands.filter(c => c.health && c.health.ok === true).length;
+        $("graph-cap").textContent = cands.length ? `${up}/${cands.length} online` : "no route";
+      },
+      fail(){ g.classList.remove("running"); draw(null); $("graph-cap").textContent = "api unreachable"; }
+    };
+  })();
+
+  /* health */
+  async function loadHealth(){
+    try {
+      const h = await getJSON("/healthz", 10000);
+      scramble($("c-endpoints"), typeof h.endpoints === "number" ? h.endpoints.toLocaleString("en-US") : "—");
+      scramble($("c-updated"), h.builtAt ? ago(h.builtAt) : "—");
+      $("status-dot").className = "dot ok"; $("status-text").textContent = "api online";
+    } catch(e){
+      $("status-dot").className = "dot bad"; $("status-text").textContent = "api not reachable right now";
+      $("c-updated").textContent = "unavailable";
+    }
+  }
+
+  /* markets */
+  async function loadMarkets(){
+    const box = $("market-list");
+    try {
+      const d = await getJSON("/markets", 10000);
+      const ms = (d.markets || []);
+      ms.forEach(m => marketTitles[m.id] = m.title);
+      scramble($("c-markets"), String(ms.length));
+      const max = Math.max(1, ...ms.map(m => Number(m.sellers) || 0));
+      const sorted = ms.slice().sort((a, b) => (b.sellers || 0) - (a.sellers || 0));
+      box.innerHTML = `<div class="mk-head tag"><span>[ ${ms.length} MARKETS ]</span><span>sellers</span></div><div class="mk-grid">` +
+        sorted.map((m, i) => `<button type="button" class="mkt" data-market="${esc(m.id)}" style="--w:${Math.max(3, Math.round((m.sellers || 0) / max * 100))}%;--d:${i * 35}ms">
+          <span class="mk-title">${esc(m.title)}</span>
+          <b>${Number(m.sellers).toLocaleString("en-US")}</b>
+          <span class="mk-bar"><i></i></span>
+          <span class="mk-run">run ›</span>
+        </button>`).join("") + `</div>`;
+    } catch(e){
+      box.innerHTML = `<p class="note">Couldn’t load markets. The demo still works with plain-word tasks.</p>`;
+    }
+  }
+  $("market-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-market]"); if (!b) return;
+    $("task").value = ""; placeCursor();
+    setChip(null);
+    route({market: b.dataset.market});
+    $("demo").scrollIntoView({behavior: reduced ? "auto" : "smooth"});
+  });
+
+  /* demo */
+  let seq = 0, timer = null;
+  function setChip(task){ document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.task === task))); }
+  /* chips type their task into the prompt, then run it */
+  let typing = 0;
+  function typeInto(text, then){
+    const my = ++typing, inp = $("task");
+    if (reduced){ inp.value = text; placeCursor(); then(); return; }
+    inp.value = ""; let i = 0;
+    (function step(){
+      if (my !== typing) return;
+      inp.value = text.slice(0, ++i); placeCursor();
+      if (i < text.length) setTimeout(step, 28); else setTimeout(then, 120);
+    })();
+  }
+  $("chips").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    setChip(c.dataset.task);
+    typeInto(c.dataset.task, () => route({task: c.dataset.task}));
+  });
+
+  /* pipeline strip */
+  const STEPS = ["ask", "check", "rank", "done"];
+  function pipe(active, failed){
+    const ai = STEPS.indexOf(active);
+    document.querySelectorAll("#pipe li").forEach((li, i) => {
+      li.className = failed && i === ai ? "fail" : i < ai || (active === "done" && i === ai) ? "done" : i === ai ? "active" : "";
+    });
+  }
+  let logTimers = [];
+  function logLine(html, cls){
+    const log = $("log"); if (!log) return;
+    log.insertAdjacentHTML("beforeend", `<span class="ln${cls ? " " + cls : ""}">${html}</span>`);
+  }
+  $("route-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const t = $("task").value.trim();
+    if (!t){ $("result-head").innerHTML = `<span class="msg">Type what your agent needs, or pick an example.</span>`; $("results").innerHTML = ""; return; }
+    setChip(t); route({task: t});
+  });
+
+  async function route(q){
+    const my = ++seq;
+    const p = new URLSearchParams();
+    if (q.market) p.set("market", q.market); else p.set("task", q.task);
+    const acc = $("accepts").value; if (acc && acc !== "any") p.set("accepts", acc);
+    const mp = $("max-price").value.trim(); if (mp && Number(mp) >= 0) p.set("max_price", mp);
+    p.set("limit", "5");
+    const what = q.market ? (marketTitles[q.market] || q.market) : `“${q.task}”`;
+    const start = performance.now();
+    $("go").disabled = true;
+    $("result-head").innerHTML = `<span class="msg">checking sellers for ${esc(what)} live…</span><span class="muted" id="elapsed">0.0 s</span>`;
+    const reqPath = "/route?" + p.toString();
+    $("results").innerHTML = `<div class="loading"><div class="scanbar"></div><pre class="log" id="log"></pre></div>`;
+    clearInterval(timer);
+    timer = setInterval(() => { const el = $("elapsed"); if (el) el.textContent = ((performance.now() - start) / 1000).toFixed(1) + " s"; }, 100);
+    graph.start();
+    logTimers.forEach(clearTimeout);
+    pipe("ask");
+    logLine(`GET ${esc(decodeURIComponent(reqPath))}`);
+    logTimers = [
+      setTimeout(() => { if (my === seq){ pipe("check"); logLine(q.market ? "loading sellers in this market…" : "matching your task to a market…"); } }, reduced ? 0 : 250),
+      setTimeout(() => { if (my === seq) logLine("pinging top sellers live (free, unpaid check)…"); }, reduced ? 0 : 700),
+      setTimeout(() => { if (my === seq) logLine("waiting for sellers to answer…"); }, reduced ? 0 : 1600)
+    ];
+    try {
+      const d = await getJSON(reqPath, 25000);
+      if (my !== seq) return;
+      logTimers.forEach(clearTimeout);
+      pipe("rank");
+      logLine(`200 OK · sellers ranked`, "ok");
+      if (!reduced) await new Promise(r => setTimeout(r, 350));
+      if (my !== seq) return;
+      pipe("done");
+      render(d, q, reqPath);
+    } catch(e){
+      if (my !== seq) return;
+      logTimers.forEach(clearTimeout);
+      pipe(STEPS[Math.max(1, document.querySelectorAll("#pipe li.done").length)], true);
+      graph.fail();
+      const why = e.name === "AbortError" ? "The request took too long." : esc(e.message || "The API didn’t answer.");
+      $("result-head").innerHTML = `<span class="msg">Couldn’t reach the router</span>`;
+      $("results").innerHTML = `<div class="err"><span>${why} Try again in a moment.</span><button class="copy" type="button" id="retry">Retry</button></div>`;
+      $("retry").onclick = () => route(q);
+    } finally {
+      if (my === seq){ clearInterval(timer); $("go").disabled = false; }
+    }
+  }
+
+  function host(u){ try { return new URL(u).hostname; } catch(e){ return u || "Unnamed seller"; } }
+  const kv = (k, v, cls) => `<span><span class="k">${k}:</span> <span class="v${cls ? " " + cls : ""}">${v}</span></span>`;
+  function statusHTML(h){
+    if (!h || typeof h.ok !== "boolean") return kv("STATUS", "NOT CHECKED");
+    let s = kv("STATUS", h.ok ? "ONLINE" : "DOWN", h.ok ? "up" : "down");
+    if (typeof h.ms === "number") s += kv("LATENCY", h.ms + " MS");
+    return s;
+  }
+  function chargeText(c){
+    if (c === "after_success") return "ON SUCCESS";
+    if (c === "before_handler") return "UP FRONT";
+    return "";
+  }
+  function candHTML(c, i, maxMs){
+    const best = i === 0;
+    const h = c.health;
+    const lat = h && typeof h.ms === "number" && maxMs ? `<div class="lat-row"><div class="lat${h.ok === false ? " down" : ""}" style="--w:${Math.max(4, Math.round(h.ms / maxMs * 100))}%"><i></i></div><span>${h.ms} ms</span></div>` : "";
+    const name = c.service && c.service.trim() ? c.service : host(c.url);
+    const labels = [...new Set((c.pay || []).map(p => p.label))];
+    const pays = labels.slice(0, 4).map(l => `<span class="badge">${esc(l)}</span>`).join("") + (labels.length > 4 ? `<span class="badge" title="${esc(labels.slice(4).join(", "))}">+${labels.length - 4} more</span>` : "");
+    const ch = chargeText(c.charges);
+    const when = c.health && typeof c.health.checkedSecondsAgo === "number" ? kv("CHECKED", c.health.checkedSecondsAgo + "S AGO") : "";
+    const uid = "u-" + seq + "-" + i;
+    const rank = String(c.rank ?? i + 1).padStart(2, "0");
+    if (!best){
+      /* backups: one compact line; open it for the full profile */
+      const st = !h || typeof h.ok !== "boolean" ? "na" : h.ok ? "up" : "down";
+      return `<li class="mini" style="--d:${i * 70}ms"><details>
+      <summary><span class="m-rank">#${rank}</span><span class="m-name">${esc(name)}</span><span class="m-st ${st}">${typeof (h && h.ms) === "number" ? h.ms + " ms" : st === "na" ? "not checked" : st}</span><span class="m-price">${money(c.priceUsd)}</span></summary>
+      <div class="m-body">
+      ${c.description ? `<p class="desc">${esc(c.description)}</p>` : ""}
+      <div class="stats">${statusHTML(c.health)}${kv("PRICE", money(c.priceUsd))}${ch ? kv("CHARGES", ch) : ""}${when}</div>
+      ${pays ? `<div class="badges">${pays}</div>` : ""}
+      <div class="urlrow"><code id="${uid}">${esc(c.url)}</code><button type="button" class="copy" data-copy="${uid}">Copy</button></div>
+      </div></details></li>`;
+    }
+    return `<li class="frame card${best ? " acc-frame" : ""}" style="--d:${i * 90}ms">
+      <div class="card-top"><span class="tag">[ SELLER PROFILE ] #${rank}</span>${best ? `<span class="best-tag">BEST RIGHT NOW</span>` : ""}</div>
+      <h3 data-scramble>${esc(name)}</h3>
+      ${c.description ? `<p class="desc">${esc(c.description)}</p>` : ""}
+      <div class="stats">${statusHTML(c.health)}${kv("PRICE", money(c.priceUsd))}${ch ? kv("CHARGES", ch) : ""}${when}</div>
+      ${lat}
+      ${pays ? `<div class="badges">${pays}</div>` : ""}
+      <div class="urlrow"><code id="${uid}">${esc(c.url)}</code><button type="button" class="copy" data-copy="${uid}">Copy</button></div>
+    </li>`;
+  }
+  function render(d, q, reqPath){
+    const cands = d.candidates || [];
+    const maxMs = Math.max(0, ...cands.map(c => c.health && typeof c.health.ms === "number" ? c.health.ms : 0));
+    const req = reqPath ? `<div class="reqline"><code id="req-url"><b>GET</b> ${esc(API + reqPath)}</code><button type="button" class="copy" data-copy="req-url">Copy</button></div>` : "";
+    const head = $("result-head");
+    graph.result(cands);
+    if (d.mode === "none" || !cands.length){
+      head.innerHTML = `<span class="msg">No sellers found</span>`;
+      $("results").innerHTML = req + `<div class="empty"><strong>Nothing matches that yet.</strong>Try plainer words, drop the filters, or pick a market below.</div>`;
+      return;
+    }
+    if (d.mode === "market"){
+      const mt = marketTitles[d.market] || d.market;
+      head.innerHTML = `<span class="msg" id="msg">Found ${Number(d.sellersMatched).toLocaleString("en-US")} sellers in ${esc(mt)}, checked live in ${esc(d.tookMs)} ms</span>`;
+    } else {
+      head.innerHTML = `<span class="msg" id="msg">Closest matches from the full inventory</span>`;
+    }
+    let html = req + `<ul class="results">${candHTML(cands[0], 0, maxMs)}</ul>`;
+    if (cands.length > 1) html += `<div class="group">BACKUPS <span class="muted">· tap one for details</span></div><ul class="minis">${cands.slice(1).map((c, i) => candHTML(c, i + 1, maxMs)).join("")}</ul>`;
+    $("results").innerHTML = html;
+    scramble($("msg"));
+    document.querySelectorAll("#results [data-scramble]").forEach(el => scramble(el));
+  }
+
+  /* tabs */
+  const tabs = [$("tab-mcp"), $("tab-http")];
+  function selectTab(t){
+    tabs.forEach(x => { const on = x === t; x.setAttribute("aria-selected", String(on)); x.tabIndex = on ? 0 : -1; $(x.getAttribute("aria-controls")).hidden = !on; });
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => selectTab(t));
+    t.addEventListener("keydown", (e) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft"){ const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; selectTab(n); n.focus(); } });
+  });
+
+  /* light / dark: remembered per browser; the swap wipes down the page behind a scan line */
+  function setMode(dark){
+    document.documentElement.dataset.mode = dark ? "dark" : "light";
+    $("mode").setAttribute("aria-pressed", String(dark));
+    $("mode-label").textContent = dark ? "dark" : "light";
+    try { localStorage.setItem("sb-mode", dark ? "dark" : "light"); } catch(e) {}
+  }
+  setMode(document.documentElement.dataset.mode === "dark");
+  $("mode").addEventListener("click", () => {
+    const dark = document.documentElement.dataset.mode !== "dark";
+    if (reduced || !document.startViewTransition){ setMode(dark); return; }
+    const line = document.createElement("div"); line.className = "sweep";
+    document.startViewTransition(() => setMode(dark)).finished.finally(() => line.remove());
+    document.body.appendChild(line);
+    scramble($("mode-label"), dark ? "dark" : "light");
+  });
+
+  scramble($("h1-text"));
+  placeCursor();
+  loadHealth();
+  loadMarkets().then(() => { setChip("search the web"); route({task: "search the web"}); });
+})();
+</script>
+
+</body>
+</html>
