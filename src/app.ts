@@ -143,6 +143,7 @@ function routeRequest(src: Record<string, any>): RouteRequest {
     accepts: list(src.accepts),
     maxPriceUsd: num(src.maxPriceUsd ?? src.max_price),
     limit: num(src.limit),
+    sort: src.sort === "price" ? "price" : undefined,
   };
 }
 

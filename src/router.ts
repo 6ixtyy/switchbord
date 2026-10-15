@@ -12,6 +12,8 @@ export interface RouteRequest {
   maxPriceUsd?: number;
   limit?: number;
   checkMs?: number;
+  /** "best" (default) weighs trust, speed and price; "price" puts live sellers first, cheapest first. */
+  sort?: "best" | "price";
 }
 
 export interface Candidate {
@@ -224,6 +226,11 @@ export class Router {
         charges: pay.some((p) => p.rail === "x402") ? "after_success" : pay.some((p) => p.rail === "mpp") ? "before_handler" : "unknown",
         score: Math.round(score * 1000) / 1000,
       });
+    }
+    if (req.sort === "price") {
+      // Sellers that failed their live check go last; among the rest, cheapest first, ties by score.
+      const down = (c: Candidate) => (c.health.ok === false ? 1 : 0);
+      return out.sort((a, b) => down(a) - down(b) || (a.priceUsd ?? Infinity) - (b.priceUsd ?? Infinity) || b.score - a.score);
     }
     return out.sort((a, b) => b.score - a.score);
   }

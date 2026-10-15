@@ -17,8 +17,9 @@ Ranked sellers for a task, checked live just before answering.
 | `accepts` | no | `x402:base:usdc,mpp:tempo` | Payment methods the agent can use. Comma-separated. A trailing `*` matches a family (`x402:*`). Omit for all |
 | `max_price` | no | `0.05` | Max price per call in USD |
 | `limit` | no | `5` | Candidates to return, 1–20 (default 5) |
+| `sort` | no | `price` | `price` puts sellers that passed the live check first, cheapest first. Omit for the default ranking (trust, speed and price together) |
 
-`POST /route` takes the same fields as a JSON body (`task`, `market`, `accepts` as an array or comma string, `maxPriceUsd`, `limit`).
+`POST /route` takes the same fields as a JSON body (`task`, `market`, `accepts` as an array or comma string, `maxPriceUsd`, `limit`, `sort`).
 
 ```json
 {
