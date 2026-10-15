@@ -11,6 +11,7 @@ import { Router, outcomeIsOk, type RouteRequest } from "./router.ts";
 import { buildInventory, loadInventory, saveInventory } from "./inventory.ts";
 import * as store from "./store.ts";
 import * as history from "./history.ts";
+import * as usage from "./usage.ts";
 import { waitUntil } from "@vercel/functions";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./mcp-tools.ts";
@@ -147,8 +148,17 @@ function routeRequest(src: Record<string, any>): RouteRequest {
   };
 }
 
+/** Read the MCP call out of a JSON-RPC body: which tool, what task, which client announced itself. */
+function mcpInfo(b: any) {
+  const m = b?.method, a = b?.params?.arguments ?? {};
+  return { method: m, tool: m === "tools/call" ? String(b.params?.name ?? "") : m ? String(m) : null, task: typeof a.task === "string" ? a.task : null, market: typeof a.market === "string" ? a.market : null, client: b?.params?.clientInfo?.name ? String(b.params.clientInfo.name) : undefined };
+}
+
 export async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? "/", "http://x");
+  const t0 = Date.now();
+  const log = (kind: usage.UsageEvent["kind"], via: "http" | "mcp", x: { tool?: string | null; task?: string | null; market?: string | null; mode?: string | null; results?: number | null; mcpClient?: string } = {}) =>
+    usage.record(req, { kind, via, tool: x.tool ?? null, task: x.task ?? null, market: x.market ?? null, mode: x.mode ?? null, results: x.results ?? null, ms: Date.now() - t0, status: res.statusCode || 200, mcpClient: x.mcpClient });
   try {
     await maybeRefresh().catch((e) => console.error("refresh failed", e));
     if (url.pathname === "/cron/daily") return send(res, 200, await daily(req));
@@ -157,7 +167,15 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     if (url.pathname === "/route") {
       const r = routeRequest(req.method === "POST" ? await readJson(req) : Object.fromEntries(url.searchParams));
       if (!r.task && !r.market) return send(res, 400, { error: "give a task (plain words) or a market id" });
-      return send(res, 200, await router.route(r));
+      const out = await router.route(r);
+      log("route", "http", { task: r.task, market: r.market, mode: out.mode, results: out.candidates.length });
+      return send(res, 200, out);
+    }
+    if (url.pathname === "/stats") {
+      const secret = process.env.CRON_SECRET;
+      if (!secret || req.headers.authorization !== `Bearer ${secret}`) return send(res, 401, { error: "usage stats are private: send Authorization: Bearer <CRON_SECRET>" });
+      await usage.flush();
+      return send(res, 200, await usage.summary(Number(url.searchParams.get("days") ?? 14)));
     }
     if (url.pathname === "/mcp") {
       if (req.method !== "POST") return send(res, 405, { error: "MCP over streamable HTTP: POST only (stateless)" });
@@ -165,8 +183,12 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
       res.on("close", () => { transport.close(); mcp.close(); });
       await mcp.connect(transport);
-      return await transport.handleRequest(req, res, await readJson(req));
+      const body = await readJson(req);
+      const info = mcpInfo(Array.isArray(body) ? body[0] : body);
+      if (info.method && info.method !== "notifications/initialized") res.on("finish", () => log("mcp", "mcp", { tool: info.tool, task: info.task, market: info.market, mcpClient: info.client }));
+      return await transport.handleRequest(req, res, body);
     }
+    if (url.pathname === "/markets") log("markets", "http");
     if (url.pathname === "/markets") return send(res, 200, { builtAt, markets: router.markets() });
     if (url.pathname.startsWith("/endpoints/")) {
       const e = router.get(url.pathname.slice("/endpoints/".length));
@@ -195,6 +217,6 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     send(res, 500, { error: String(e?.message ?? e) });
   } finally {
     // Save this request's live checks after the response; on Vercel waitUntil keeps the instance alive for it.
-    waitUntil(history.settle().catch(() => 0));
+    waitUntil(Promise.all([history.settle().catch(() => 0), usage.flush().catch(() => 0)]));
   }
 }
