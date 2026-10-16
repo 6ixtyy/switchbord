@@ -1,0 +1,22 @@
+# SwitchBord
+
+> SwitchBord is a free, live router for paid agent APIs (x402 and MPP). An agent asks for a task in plain words; SwitchBord returns the sellers that are working, cheapest and fastest right now, checked live just before it answers, plus backups. No signup, no keys. SwitchBord never handles payments: the agent pays the seller directly with its own wallet and x402 or MPP client.
+
+- MCP server (streamable HTTP, no auth): https://switchbord.vercel.app/mcp. Tools: `find_paid_endpoint` (task → ranked sellers), `list_markets`, `report_result` (optional).
+- HTTP API base: https://switchbord.vercel.app. Main call: `GET /route?task=<plain words>&accepts=x402:base:usdc&max_price=0.05`.
+- Inventory: 33,000+ paid endpoints from Coinbase Bazaar (x402) and mpp.dev (MPP), rebuilt daily, grouped into markets of interchangeable sellers. If no market fits, `/route` returns the closest single endpoints (`mode: "inventory"`).
+- Each candidate has `url`, `method`, `priceUsd`, `pay[]` (payment options; `label` like `x402:<network>:usdc` or `mpp:<method>`), `input` (the seller's example request; override its fields with your own), `health` (live check) and `charges` (`after_success` for x402: only charged on success; `before_handler` for MPP: charged up front).
+- Open source (MIT): https://github.com/6ixtyy/switchbord. Self-host with Node 22: `npm ci && npm run inventory && npm start`.
+- On failure, try the next candidate. Optionally `POST /report` (or `report_result`) with the outcome.
+
+## Docs
+
+- [README](https://github.com/6ixtyy/switchbord/blob/main/README.md): what it is and quick start
+- [API contract](https://github.com/6ixtyy/switchbord/blob/main/API.md): every stable request and response field
+- [MCP setup](https://github.com/6ixtyy/switchbord/blob/main/MCP.md): config for Claude Code, Claude Desktop, Cursor, VS Code and others
+- [Examples](https://github.com/6ixtyy/switchbord/tree/main/examples): curl, Node and MCP snippets
+
+## Optional
+
+- [Site](https://switchbord.xyz): live numbers and a demo
+- [Changelog](https://github.com/6ixtyy/switchbord/blob/main/CHANGELOG.md)

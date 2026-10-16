@@ -8,7 +8,23 @@
 <link rel="icon" href="/favicon.ico?v=2" sizes="any">
 <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
-<title>SwitchBord</title>
+<title>SwitchBord: free live router for paid agent APIs (x402 and MPP)</title>
+<link rel="canonical" href="https://switchbord.xyz/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SwitchBord">
+<meta property="og:title" content="SwitchBord: free live router for paid agent APIs (x402 and MPP)">
+<meta property="og:description" content="Your agent asks for a task; SwitchBord returns the working, cheapest, fastest sellers plus backups, checked live. Free, no signup, never touches your money.">
+<meta property="og:url" content="https://switchbord.xyz/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SwitchBord: free live router for paid agent APIs">
+<meta name="twitter:description" content="Find the best working x402 and MPP sellers for any task, checked live. Free MCP server and HTTP API.">
+<link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"WebSite","@id":"https://switchbord.xyz/#site","name":"SwitchBord","url":"https://switchbord.xyz/"},
+{"@type":"SoftwareApplication","@id":"https://switchbord.xyz/#app","name":"SwitchBord","applicationCategory":"DeveloperApplication","operatingSystem":"Any","url":"https://switchbord.xyz/","description":"A free, live router for paid agent APIs (x402 and MPP). An agent asks for a task and gets the sellers that are working, cheapest and fastest right now, checked live, plus backups. SwitchBord never handles payments.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT","codeRepository":"https://github.com/6ixtyy/switchbord","sameAs":["https://github.com/6ixtyy/switchbord"]}
+]}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -302,6 +318,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-block:20px 40px;
   .card{padding:12px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#faq h3{font-size:13px;margin:14px 0 4px;color:var(--ink)}#faq h3:first-child{margin-top:0}#faq p{font-size:12px;line-height:1.6;color:var(--muted);margin:0}#faq a{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -442,6 +459,22 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-block:20px 40px;
     <p class="wallet">Your agent needs its own x402 or MPP client and wallet to pay sellers.</p>
   </section>
 
+
+  <section class="sec" id="faq">
+    <h2 class="label">// FAQ</h2>
+    <div class="frame">
+      <h3>What is SwitchBord?</h3>
+      <p>SwitchBord is a free, live router for paid agent APIs. An AI agent asks for a task in plain words, and SwitchBord returns the sellers that are working, cheapest and fastest right now, checked live just before it answers, plus backups.</p>
+      <h3>Which payment protocols does it cover?</h3>
+      <p>x402 and MPP (Machine Payments Protocol). The inventory is 33,000+ paid endpoints from Coinbase Bazaar (x402) and mpp.dev (MPP), grouped into markets of interchangeable sellers.</p>
+      <h3>Does SwitchBord handle payments?</h3>
+      <p>No. The agent pays the seller directly with its own wallet and x402 or MPP client. SwitchBord never holds, moves or signs for funds.</p>
+      <h3>How do I connect an agent?</h3>
+      <p>Add the MCP server <code>https://switchbord.vercel.app/mcp</code> (streamable HTTP, no auth) or call <code>GET https://switchbord.vercel.app/route?task=search%20the%20web</code>. No signup, no keys.</p>
+      <h3>Is it open source?</h3>
+      <p>Yes, MIT licensed: <a href="https://github.com/6ixtyy/switchbord">github.com/6ixtyy/switchbord</a>. See also <a href="/llms.txt">llms.txt</a>.</p>
+    </div>
+  </section>
 
   <footer>
     <div class="status"><span class="dot" id="status-dot"></span><span id="status-text">checking api…</span></div>
