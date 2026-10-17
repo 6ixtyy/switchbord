@@ -11,7 +11,7 @@ import type { IncomingMessage } from "node:http";
 export interface UsageEvent {
   at: Date; kind: "route" | "mcp" | "markets" | "endpoint" | "report"; via: "http" | "mcp"; tool: string | null;
   task: string | null; market: string | null; mode: string | null; results: number | null; ms: number; status: number;
-  client: string; ua: string | null; visitor: string; country: string | null;
+  client: string; ua: string | null; visitor: string; country: string | null; src: string | null;
 }
 
 const raw = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
@@ -26,7 +26,8 @@ let schema: Promise<unknown> | null = null;
 const ensureSchema = () => (schema ??= sql!.begin(async (tx) => {
   await tx`create table if not exists usage_events (
     id bigserial primary key, at timestamptz not null, kind text not null, via text not null, tool text, task text, market text,
-    mode text, results integer, ms integer not null, status smallint not null, client text not null, ua text, visitor text not null, country text)`;
+    mode text, results integer, ms integer not null, status smallint not null, client text not null, ua text, visitor text not null, country text, src text)`;
+  await tx`alter table usage_events add column if not exists src text`;
   await tx`create index if not exists usage_events_at on usage_events (at)`;
 }).catch((e) => { schema = null; throw e; }));
 
@@ -53,11 +54,21 @@ function visitor(req: IncomingMessage): string {
   return createHash("sha256").update(`${salt}|${day}|${ip}`).digest("hex").slice(0, 16);
 }
 
-export function record(req: IncomingMessage, e: Omit<UsageEvent, "at" | "ua" | "visitor" | "country" | "client"> & { mcpClient?: string }) {
+/** Where a call came from: an explicit ?src=tag on the URL (use it on links you post), else the referring site. */
+function source(req: IncomingMessage): string | null {
+  try {
+    const tag = new URL(req.url ?? "/", "http://x").searchParams.get("src");
+    if (tag && /^[\w.-]{1,40}$/.test(tag)) return tag.toLowerCase();
+    const ref = req.headers.referer ? new URL(String(req.headers.referer)).hostname.replace(/^www\./, "") : "";
+    return ref ? ref.slice(0, 60) : null;
+  } catch { return null; }
+}
+
+export function record(req: IncomingMessage, e: Omit<UsageEvent, "at" | "ua" | "visitor" | "country" | "client" | "src"> & { mcpClient?: string }) {
   if (!keep) return;
   const ua = req.headers["user-agent"] ? String(req.headers["user-agent"]).slice(0, 120) : null;
   const { mcpClient, ...rest } = e;
-  buffer.push({ ...rest, task: rest.task ? rest.task.slice(0, 200) : null, at: new Date(), ua, client: clientName(ua ?? undefined, mcpClient), visitor: visitor(req), country: (req.headers["x-vercel-ip-country"] as string) ?? null });
+  buffer.push({ ...rest, task: rest.task ? rest.task.slice(0, 200) : null, at: new Date(), ua, client: clientName(ua ?? undefined, mcpClient), visitor: visitor(req), country: (req.headers["x-vercel-ip-country"] as string) ?? null, src: source(req) });
   if (buffer.length > MAX_BUFFER) buffer.splice(0, buffer.length - MAX_BUFFER);
 }
 
@@ -81,18 +92,23 @@ export async function summary(days = 14) {
   await ensureSchema();
   const d = Math.min(Math.max(Math.floor(days) || 14, 1), 90);
   const since = sql`now() - make_interval(days => ${d})`;
-  const [daily, hourly, tasks, clients, modes, tools, totals, countries] = await Promise.all([
+  const real = sql`(kind = 'route' or tool = 'find_paid_endpoint') and client <> 'bot'`;
+  const [daily, hourly, tasks, clients, modes, tools, totals, countries, sources] = await Promise.all([
     sql`select to_char(date_trunc('day', at), 'YYYY-MM-DD') as day, count(*)::int as calls, count(distinct visitor)::int as visitors,
-        count(*) filter (where via = 'mcp')::int as mcp, count(*) filter (where kind = 'route')::int as routes
+        count(*) filter (where via = 'mcp')::int as mcp, count(*) filter (where kind = 'route')::int as routes,
+        count(*) filter (where ${real})::int as real, count(distinct visitor) filter (where ${real})::int as real_visitors
         from usage_events where at > ${since} group by 1 order by 1`,
     sql`select to_char(date_trunc('hour', at), 'YYYY-MM-DD"T"HH24":00Z"') as hour, count(*)::int as calls from usage_events where at > now() - interval '24 hours' group by 1 order by 1`,
-    sql`select task, count(*)::int as calls from usage_events where at > ${since} and task is not null group by 1 order by 2 desc limit 20`,
+    sql`select task, count(*)::int as calls from usage_events where at > ${since} and task is not null and client <> 'bot' group by 1 order by 2 desc limit 20`,
     sql`select client, count(*)::int as calls, count(distinct visitor)::int as visitor_days from usage_events where at > ${since} group by 1 order by 2 desc limit 15`,
     sql`select coalesce(mode, '-') as mode, count(*)::int as calls from usage_events where at > ${since} and kind in ('route') group by 1 order by 2 desc`,
     sql`select coalesce(tool, kind) as tool, via, count(*)::int as calls from usage_events where at > ${since} group by 1, 2 order by 3 desc`,
-    sql`select count(*)::int as calls, count(distinct visitor)::int as visitor_days, min(at) as first_call, max(at) as last_call,
+    sql`select count(*)::int as calls, count(distinct visitor)::int as visitor_days,
+        count(*) filter (where ${real})::int as real, count(distinct visitor) filter (where ${real})::int as real_visitors,
+        count(*) filter (where client = 'bot')::int as bots, count(*) filter (where via = 'mcp' and ${real})::int as real_mcp, min(at) as first_call, max(at) as last_call,
         percentile_cont(0.5) within group (order by ms)::int as p50_ms from usage_events where at > ${since}`,
     sql`select coalesce(country, '?') as country, count(*)::int as calls from usage_events where at > ${since} group by 1 order by 2 desc limit 10`,
+    sql`select coalesce(src, '(direct)') as src, count(*)::int as calls, count(*) filter (where ${real})::int as real from usage_events where at > ${since} group by 1 order by 3 desc, 2 desc limit 15`,
   ]);
-  return { enabled: true, days: d, note: "visitors = distinct hashed callers per day, summed over days (no cross-day tracking)", totals: totals[0], daily, last24hByHour: hourly, topTasks: tasks, clients, routeModes: modes, tools, countries };
+  return { enabled: true, days: d, note: "visitors = distinct hashed callers per day, summed over days (no cross-day tracking)", totals: totals[0], daily, last24hByHour: hourly, topTasks: tasks, clients, routeModes: modes, tools, countries, sources };
 }

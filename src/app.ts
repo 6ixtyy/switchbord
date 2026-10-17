@@ -113,15 +113,15 @@ async function sample(req: IncomingMessage) {
 }
 
 // Remote agent tool: find + report only. Paying needs the agent's own wallet, so that tool exists only in the local MCP.
-const mcpBackend = {
-  route: (r: RouteRequest) => router.route(r),
+const mcpBackend = (cap: { mode?: string; results?: number }) => ({
+  route: async (r: RouteRequest) => { const out = await router.route(r); cap.mode = out.mode; cap.results = out.candidates.length; return out; },
   markets: async () => ({ builtAt, markets: router.markets() }),
   report: async (b: any) => {
     if (!router.get(String(b.endpointId)) || !OUTCOMES.has(b.outcome)) return { accepted: false, error: "unknown endpoint or outcome" };
     await saveReport(b);
     return { accepted: true };
   },
-};
+});
 
 function send(res: ServerResponse, status: number, body: unknown) {
   const s = JSON.stringify(body);
@@ -181,13 +181,14 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     }
     if (url.pathname === "/mcp") {
       if (req.method !== "POST") return send(res, 405, { error: "MCP over streamable HTTP: POST only (stateless)" });
-      const mcp = createMcpServer(mcpBackend);
+      const cap: { mode?: string; results?: number } = {};
+      const mcp = createMcpServer(mcpBackend(cap));
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
       res.on("close", () => { transport.close(); mcp.close(); });
       await mcp.connect(transport);
       const body = await readJson(req);
       const info = mcpInfo(Array.isArray(body) ? body[0] : body);
-      if (info.method && info.method !== "notifications/initialized") res.on("finish", () => log("mcp", "mcp", { tool: info.tool, task: info.task, market: info.market, mcpClient: info.client }));
+      if (info.method && info.method !== "notifications/initialized") res.on("finish", () => log("mcp", "mcp", { tool: info.tool, task: info.task, market: info.market, mode: cap.mode, results: cap.results, mcpClient: info.client }));
       return await transport.handleRequest(req, res, body);
     }
     if (url.pathname === "/markets") log("markets", "http");
