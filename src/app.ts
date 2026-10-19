@@ -12,6 +12,7 @@ import { buildInventory, loadInventory, saveInventory } from "./inventory.ts";
 import * as store from "./store.ts";
 import * as history from "./history.ts";
 import * as usage from "./usage.ts";
+import { refresh, getHealth } from "./health.ts";
 import { dashboardHtml } from "./dashboard.ts";
 import { waitUntil } from "@vercel/functions";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -155,6 +156,26 @@ function mcpInfo(b: any) {
   return { method: m, tool: m === "tools/call" ? String(b.params?.name ?? "") : m ? String(m) : null, task: typeof a.task === "string" ? a.task : null, market: typeof a.market === "string" ? a.market : null, client: b?.params?.clientInfo?.name ? String(b.params.clientInfo.name) : undefined };
 }
 
+const badgeSvg = (label: string, value: string, color: string) => {
+  const w1 = 82, w2 = Math.max(60, Math.round(value.length * 6.6 + 14)), w = w1 + w2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="20" role="img" aria-label="${label}: ${value}"><title>${label}: ${value}</title><rect width="${w1}" height="20" fill="#0d1317"/><rect x="${w1}" width="${w2}" height="20" fill="${color}"/><g fill="#fff" font-family="Verdana,Geneva,sans-serif" font-size="11" text-anchor="middle"><text x="${w1 / 2}" y="14">${label}</text><text x="${w1 + w2 / 2}" y="14">${value}</text></g></svg>`;
+};
+
+/** Seller badge: a free live check of up to 3 of the host's listed endpoints. Only hosts in the inventory; cached 5 minutes. */
+async function badge(res: ServerResponse, host: string) {
+  const h = host.toLowerCase();
+  const es = /^[a-z0-9.-]{1,100}$/.test(h) ? router.endpoints.filter((e) => { try { return new URL(e.url).hostname === h; } catch { return false; } }) : [];
+  let svg = badgeSvg("SwitchBord", "not listed", "#6b7780");
+  if (es.length) {
+    const top = [...es].sort((a, b) => (b.usage?.payers30d ?? 0) - (a.usage?.payers30d ?? 0)).slice(0, 3);
+    await refresh(top, 3500, "route");
+    const ok = top.filter((e) => getHealth(e.id)?.ok).length;
+    svg = ok ? badgeSvg("SwitchBord", "live ✓", "#1a8f5a") : badgeSvg("SwitchBord", "listed · not answering", "#b4691f");
+  }
+  res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=300", "access-control-allow-origin": "*" });
+  res.end(svg);
+}
+
 export async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? "/", "http://x");
   const t0 = Date.now();
@@ -173,6 +194,11 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       return send(res, 200, out);
     }
     if (url.pathname === "/dashboard") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(dashboardHtml); }
+    if (url.pathname === "/pulse") {
+      res.setHeader("cache-control", "public, max-age=60");
+      return send(res, 200, await usage.pulse().catch(() => ({ enabled: false })));
+    }
+    if (url.pathname.startsWith("/badge/")) return badge(res, decodeURIComponent(url.pathname.slice(7)).replace(/\.svg$/, ""));
     if (url.pathname === "/stats") {
       const secret = process.env.CRON_SECRET;
       if (!secret || req.headers.authorization !== `Bearer ${secret}`) return send(res, 401, { error: "usage stats are private: send Authorization: Bearer <CRON_SECRET>" });

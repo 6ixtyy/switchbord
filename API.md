@@ -95,6 +95,21 @@ One endpoint from the inventory: `id`, `service`, `url`, `method`, `description`
 
 `builtAt` is when the inventory was last rebuilt (daily).
 
+## GET /pulse
+
+Public usage numbers, aggregates only (no IPs, no tasks):
+
+```json
+{ "enabled": true, "callers24h": 37, "queries24h": 112, "callersToday": 21, "queriesTotal": 640, "since": "2026-10-15T09:00:00.000Z",
+  "clients24h": [{ "client": "claude", "callers": 12 }], "note": "…" }
+```
+
+`callers` are distinct hashed callers (the hash changes daily, so `callers24h` can count one caller twice if they straddle 00:00 UTC). `queries` are routing requests with bots left out. `{ "enabled": false }` when usage logging is off.
+
+## GET /badge/:host.svg
+
+A small SVG badge for sellers: a free, unpaid live check of up to three of the host's listed endpoints, cached 5 minutes. Text is `live ✓`, `listed · not answering` or `not listed`. Only hosts in the inventory are checked.
+
 ## POST /report (optional)
 
 Tell SwitchBord how a call went. It improves rankings for everyone. Not required.

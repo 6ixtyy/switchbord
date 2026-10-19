@@ -112,3 +112,20 @@ export async function summary(days = 14) {
   ]);
   return { enabled: true, days: d, note: "visitors = distinct hashed callers per day, summed over days (no cross-day tracking)", totals: totals[0], daily, last24hByHour: hourly, topTasks: tasks, clients, routeModes: modes, tools, countries, sources };
 }
+
+/** Public numbers for GET /pulse: aggregates only, no rows, no tasks. Real = route or find_paid_endpoint, bots left out.
+ *  `callers24h` can count one caller twice if they straddle 00:00 UTC (the visitor hash changes daily). */
+export async function pulse() {
+  if (!sql) return { enabled: false };
+  await ensureSchema();
+  const real = sql`(kind = 'route' or tool = 'find_paid_endpoint') and client <> 'bot'`;
+  const [r] = await sql`select
+    count(distinct visitor) filter (where ${real} and at > now() - interval '24 hours')::int as "callers24h",
+    count(*) filter (where ${real} and at > now() - interval '24 hours')::int as "queries24h",
+    count(distinct visitor) filter (where ${real} and at >= date_trunc('day', now()))::int as "callersToday",
+    count(*) filter (where ${real})::int as "queriesTotal",
+    min(at) as since from usage_events`;
+  const clients = await sql`select client, count(distinct visitor)::int as callers from usage_events
+    where ${real} and at > now() - interval '24 hours' group by 1 order by 2 desc limit 8`;
+  return { enabled: true, ...r, clients24h: clients, note: "callers = distinct hashed callers (no IPs stored); queries = routing requests, bots excluded" };
+}

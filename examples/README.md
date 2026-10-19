@@ -8,3 +8,4 @@ None of these pay anyone. They ask SwitchBord who to call; paying the seller is 
 | [find-route.mjs](find-route.mjs) | Same in Node 18+, no dependencies: `node find-route.mjs "search the web"` |
 | [mcp-tools-list.sh](mcp-tools-list.sh) | List the MCP server's tools over plain HTTP |
 | [mcp.json](mcp.json) | MCP client config |
+| [../integrations/switchbord-tool.mjs](../integrations/switchbord-tool.mjs) | Drop-in tool for any agent framework: one function plus OpenAI-style and Anthropic-style schemas |

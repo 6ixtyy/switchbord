@@ -341,7 +341,12 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-block:20px 40px;
       <span>endpoints<b id="c-endpoints">—</b></span>
       <span>markets<b id="c-markets">—</b></span>
       <span>updated<b id="c-updated">—</b></span>
+      <span id="c-agents-wrap" hidden>agents, 24h<b id="c-agents">—</b></span>
     </div>
+    <p class="code-label">paste this into your agent</p>
+    <div class="code"><pre id="code-agent" style="white-space:pre-wrap;overflow-wrap:anywhere;padding-right:70px">Before you pay any x402 or MPP API, ask SwitchBord who to call (free, no key).
+MCP: https://switchbord.vercel.app/mcp  ·  or GET https://switchbord.vercel.app/route?task=&lt;what you need&gt;&amp;accepts=x402:base:usdc
+Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llms.txt</pre><button class="copy" data-copy="code-agent">Copy</button></div>
     <div class="ctas">
       <a class="cmd" href="#demo">try it</a>
       <a class="cmd" href="#connect">connect your agent</a>
@@ -615,6 +620,15 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-block:20px 40px;
       $("c-updated").textContent = "unavailable";
     }
   }
+
+  /* agents seen (public aggregate; hidden until there is something real to show) */
+  async function loadPulse(){
+    try {
+      const p = await getJSON("/pulse", 10000);
+      if (p && p.enabled && p.callers24h > 0) { $("c-agents-wrap").hidden = false; scramble($("c-agents"), p.callers24h.toLocaleString("en-US")); }
+    } catch(e){}
+  }
+  loadPulse();
 
   /* markets */
   async function loadMarkets(){

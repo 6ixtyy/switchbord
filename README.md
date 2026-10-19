@@ -48,6 +48,18 @@ claude mcp add --transport http switchbord https://switchbord.vercel.app/mcp
 { "mcpServers": { "switchbord": { "type": "http", "url": "https://switchbord.vercel.app/mcp" } } }
 ```
 
+**Any agent, one paste.** Add this to `CLAUDE.md`, `AGENTS.md` or a system prompt ([more in AGENTS-SNIPPET.md](AGENTS-SNIPPET.md)):
+
+```
+Before you pay any x402 or MPP API, ask SwitchBord who to call (free, no key).
+MCP: https://switchbord.vercel.app/mcp  or  GET https://switchbord.vercel.app/route?task=<what you need>&accepts=x402:base:usdc
+Call the top result; if it fails, try the next.
+```
+
+Building your own agent? [`integrations/switchbord-tool.mjs`](integrations/switchbord-tool.mjs) is a dependency-free tool with OpenAI-style and Anthropic-style schemas.
+
+**Selling on x402 or MPP?** Show a live badge on your README: `![SwitchBord](https://switchbord.vercel.app/badge/your-host.com.svg)` ([details](AGENTS-SNIPPET.md#sellers-show-you-are-live)).
+
 <details>
 <summary><b>Plugins, Gemini CLI and other clients</b></summary>
 <br>
