@@ -41,15 +41,15 @@ async function useEndpoints(endpoints: Router["endpoints"], at: string) {
 
 /** Pull every source, rebuild, publish (Blob when available, else the local file). */
 export async function rebuild() {
-  const { endpoints, errors } = await buildInventory();
-  if (errors.length) console.error("inventory source errors:", errors);
-  if (!endpoints.length) throw new Error("no endpoints fetched: " + errors.join("; "));
+  const { endpoints, errors, carried, fresh } = await buildInventory(router?.endpoints ?? []);
+  if (errors.length) console.error("inventory source errors (kept previous endpoints):", errors, carried);
+  if (!fresh) throw new Error("no endpoints fetched: " + errors.join("; "));
   const at = new Date().toISOString();
   if (store.enabled) await store.saveInventory(at, endpoints);
   else saveInventory(endpoints);
   await useEndpoints(endpoints, at);
   console.log(`inventory: ${endpoints.length} endpoints`);
-  return { endpoints: endpoints.length, errors };
+  return { endpoints: endpoints.length, errors, carried };
 }
 
 /** Load the newest inventory: Blob (if newer than the bundled copy), else the file, else build one. */

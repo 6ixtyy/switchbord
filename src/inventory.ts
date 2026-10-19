@@ -44,11 +44,17 @@ export function merge(lists: Omit<Endpoint, "id" | "market">[][]): Endpoint[] {
   return out;
 }
 
-export async function buildInventory(): Promise<{ endpoints: Endpoint[]; errors: string[] }> {
+/** A source that failed this time keeps its endpoints from the previous inventory, so one catalog being down
+ *  doesn't drop its sellers. They're tagged with the source's name, so they're replaced as soon as it answers again. */
+export async function buildInventory(previous: Endpoint[] = []): Promise<{ endpoints: Endpoint[]; errors: string[]; carried: Record<string, number>; fresh: number }> {
   const errors: string[] = [];
-  const settle = async <T,>(name: string, p: Promise<T[]>) => p.catch((e) => (errors.push(`${name}: ${e.message}`), [] as T[]));
+  const failed = new Set<string>();
+  const settle = async <T,>(name: string, p: Promise<T[]>) => p.catch((e) => (failed.add(name), errors.push(`${name}: ${e.message}`), [] as T[]));
   const [bazaar, mpp] = await Promise.all([settle("bazaar", fetchBazaar()), settle("mpp", fetchMpp())]);
-  return { endpoints: merge([bazaar, mpp]), errors };
+  const carried: Record<string, number> = {};
+  const kept = previous.filter((e) => e.sources.some((s) => failed.has(s)));
+  for (const name of failed) carried[name] = kept.filter((e) => e.sources.includes(name)).length;
+  return { endpoints: merge([bazaar, mpp, kept]), errors, carried, fresh: bazaar.length + mpp.length };
 }
 
 export function saveInventory(endpoints: Endpoint[], path = INVENTORY_PATH) {
