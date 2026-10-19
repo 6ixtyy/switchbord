@@ -1,4 +1,11 @@
-export type Rail = "x402" | "mpp";
+/** Payment protocols SwitchBord routes. Add a rail here, then see docs/ADDING-A-RAIL.md. */
+export const RAILS = {
+  /** When the buyer is charged: x402 settles only after the seller succeeds; MPP charges before the handler runs. */
+  x402: { charges: "after_success" },
+  mpp: { charges: "before_handler" },
+} as const;
+
+export type Rail = keyof typeof RAILS;
 
 /** One way to pay an endpoint. `label` is what agents match against, e.g. "x402:base:usdc", "mpp:tempo". */
 export interface PayOption {

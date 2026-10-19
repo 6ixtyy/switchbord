@@ -1,6 +1,6 @@
 // Routing: task -> market (many sellers, ranked, with fallbacks) or, failing that, the best
 // matching endpoints from the whole inventory. "Not available" only when nothing matches at all.
-import type { Endpoint, Health, PayOption } from "./types.ts";
+import { RAILS, type Endpoint, type Health, type PayOption, type Rail } from "./types.ts";
 import { MARKETS, MARKET_IDS, classify, endpointText } from "./markets.ts";
 import { accepts as matches } from "./labels.ts";
 import { getHealth, refresh } from "./health.ts";
@@ -223,7 +223,7 @@ export class Router {
         rank: 0, id: e.id, service: e.service, url: e.url, method: e.method, description: e.description,
         market: e.market, pay, priceUsd: price, input: e.input,
         health: h ? { ok: h.ok, status: h.status, ms: h.ms, checkedSecondsAgo: Math.round((Date.now() - h.checkedAt) / 1000), error: h.error } : { ok: null },
-        charges: pay.some((p) => p.rail === "x402") ? "after_success" : pay.some((p) => p.rail === "mpp") ? "before_handler" : "unknown",
+        charges: chargesFor(pay),
         score: Math.round(score * 1000) / 1000,
       });
     }
@@ -240,6 +240,12 @@ export class Router {
 export function outcomeIsOk(outcome: string): boolean | null {
   if (outcome === "ok") return true;
   return ["timeout_before_pay", "bad_terms"].includes(outcome) ? null : false;
+}
+
+/** When the buyer is charged, from the first rail (in RAILS order) the endpoint accepts. */
+function chargesFor(pay: PayOption[]): Candidate["charges"] {
+  const rail = (Object.keys(RAILS) as Rail[]).find((r) => pay.some((p) => p.rail === r));
+  return rail ? RAILS[rail].charges : "unknown";
 }
 
 const ms = (t0: number) => Math.round(performance.now() - t0);
