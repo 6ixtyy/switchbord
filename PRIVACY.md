@@ -9,7 +9,7 @@ SwitchBord is a free router for paid agent APIs. It has no accounts, no sign-in 
 | Live checks of sellers (which endpoint, up or down, status code, response time, price) | Ranking sellers and measuring how rankings change | Kept as history. These are about sellers, not about you |
 | Reports you choose to send (`report_result` or `POST /report`): endpoint id, outcome, time taken, and optionally a payment tx hash and network | Ranking sellers by real use | Raw reports are folded into per-endpoint counts daily, then deleted |
 
-We don't store the tasks you ask for, and we don't build profiles. The site sets no cookies and runs no analytics.
+We don't store the tasks you ask for, and we don't build profiles. The site sets no cookies. It uses Vercel Web Analytics, which counts page views and where visitors came from (referring site, country, device type, and the `?src=` tag on a link if there is one) without cookies and without following you across sites.
 
 ## What our host sees
 
@@ -27,4 +27,4 @@ We don't sell or share personal data. Aggregate numbers (seller counts, health, 
 
 Questions or requests: open an issue at [github.com/6ixtyy/switchbord](https://github.com/6ixtyy/switchbord/issues). Security problems: see [SECURITY.md](SECURITY.md).
 
-Last updated: 2026-10-13.
+Last updated: 2026-10-20.
