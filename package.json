@@ -15,6 +15,7 @@
   },
   "scripts": {
     "inventory": "node src/cli/build-inventory.ts",
+    "test": "node --test test/*.test.ts",
     "start": "node src/server.ts",
     "build:vercel": "node scripts/build-vercel.mjs"
   },

@@ -22,9 +22,17 @@ export async function fetchMpp(): Promise<Omit<Endpoint, "id" | "market">[]> {
   const r = await fetch(API, { signal: AbortSignal.timeout(60_000) });
   if (!r.ok) throw new Error(`mpp ${r.status}`);
   const { services } = (await r.json()) as { services: any[] };
+  return mppEndpoints(services);
+}
+
+/** A service's own tags describe the whole service. A multi-topic service (AIsa: web search, finance, weather,
+ *  travel...) must not hand every endpoint every topic, or each one lands in every market. Such a service's
+ *  endpoints are tagged from their own description only. */
+export function mppEndpoints(services: any[]): Omit<Endpoint, "id" | "market">[] {
   const out: Omit<Endpoint, "id" | "market">[] = [];
   for (const s of services) {
     if (s.status && s.status !== "active") continue;
+    const multiTopic = (s.tags ?? []).length > 1;
     const base = (s.serviceUrl ?? s.url ?? "").replace(/\/$/, "");
     for (const ep of s.endpoints ?? []) {
       if (!ep.payment) continue; // free endpoint
@@ -32,8 +40,8 @@ export async function fetchMpp(): Promise<Omit<Endpoint, "id" | "market">[]> {
         url: base + ep.path,
         method: (ep.method ?? "GET").toUpperCase(),
         service: s.name ?? s.id,
-        description: (ep.description || s.description || "").slice(0, 500),
-        tags: [...(s.categories ?? []), ...(s.tags ?? [])].slice(0, 12),
+        description: (ep.description || (multiTopic ? s.name : s.description) || "").slice(0, 500),
+        tags: [...(s.categories ?? []), ...(multiTopic ? [] : s.tags ?? [])].slice(0, 12),
         pay: payOptions(s, ep),
         sources: ["mpp"],
       });
