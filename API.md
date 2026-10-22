@@ -95,6 +95,18 @@ One endpoint from the inventory: `id`, `service`, `url`, `method`, `description`
 
 `builtAt` is when the inventory was last rebuilt (daily).
 
+## GET /facilitators
+
+Free live check of the public x402 facilitators (`GET <facilitator>/supported`, no payment). Cached for a minute.
+
+```json
+{ "checkedAt": "2026-10-22T18:51:54Z", "slowMs": 2000,
+  "facilitators": [{ "id": "payai", "name": "PayAI", "state": "up", "ms": 331, "networks": ["base", "solana"], "checkedAt": "…" }],
+  "networks": [{ "network": "base", "up": 3, "total": 3, "slow": 0, "bestMs": 331 }] }
+```
+
+`state` is `up`, `reachable` (answers but needs an API key, so `networks` is empty) or `down` (with `error`). Offers name a network, not a facilitator, so health is per network. `/route` adds a `warnings` array (only when non-empty) when no facilitator for a candidate's network is answering or all of them are slow; it uses the last probe and never waits.
+
 ## GET /pulse
 
 Public usage numbers, aggregates only (no IPs, no tasks):

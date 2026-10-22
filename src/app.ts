@@ -13,6 +13,8 @@ import * as store from "./store.ts";
 import * as history from "./history.ts";
 import * as usage from "./usage.ts";
 import { refresh, getHealth } from "./health.ts";
+import * as facilitators from "./facilitators.ts";
+import { networkName } from "./labels.ts";
 import { dashboardHtml } from "./dashboard.ts";
 import { waitUntil } from "@vercel/functions";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -189,9 +191,18 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
     if (url.pathname === "/route") {
       const r = routeRequest(req.method === "POST" ? await readJson(req) : Object.fromEntries(url.searchParams));
       if (!r.task && !r.market) return send(res, 400, { error: "give a task (plain words) or a market id" });
-      const out = await router.route(r);
+      const out: any = await router.route(r);
+      // Facilitator warnings come from the last probe only (no extra wait); a fresh probe runs after the answer.
+      const warnings = facilitators.warningsFor(out.candidates.flatMap((c: any) => c.pay.filter((p: any) => p.rail === "x402").map((p: any) => networkName(p.network))));
+      if (warnings.length) out.warnings = warnings;
+      history.track(facilitators.snapshot().catch(() => []));
       log("route", "http", { task: r.task, market: r.market, mode: out.mode, results: out.candidates.length });
       return send(res, 200, out);
+    }
+    if (url.pathname === "/facilitators") {
+      const list = await facilitators.snapshot();
+      res.setHeader("cache-control", "public, max-age=30");
+      return send(res, 200, { checkedAt: list[0]?.checkedAt ?? null, slowMs: facilitators.SLOW_MS, facilitators: list, networks: facilitators.byNetwork(list) });
     }
     if (url.pathname === "/dashboard") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(dashboardHtml); }
     if (url.pathname === "/pulse") {
