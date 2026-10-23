@@ -26,6 +26,7 @@ const ensureSchema = () => (schema ??= sql!.begin(async (tx) => {
     ok boolean not null, status smallint, ms integer not null, price_usd double precision, error text, source text not null)`;
   await tx`create index if not exists checks_endpoint_at on checks (endpoint_id, at)`;
   await tx`create index if not exists checks_at on checks (at)`;
+  await tx`create table if not exists reports (id bigserial primary key, at timestamptz not null, endpoint_id text not null, outcome text not null, ms integer, tx text, network text)`;
   await tx`create table if not exists rankings (at timestamptz not null, market text not null, endpoint_ids text[] not null, primary key (market, at))`;
 }).catch((e) => { schema = null; throw e; }));
 
@@ -98,4 +99,16 @@ export async function lastSampleAt(): Promise<Date | null> {
   await ensureSchema();
   const [r] = await sql`select max(at) as at from rankings`;
   return r?.at ?? null;
+}
+
+/** Real-call reports (POST /report). In Postgres, not Blob: every Blob write counts against Hobby's 2,000 a month. */
+export async function insertReport(r: { at: string; endpointId: string; outcome: string; ms?: number; tx?: string; network?: string }) {
+  await ensureSchema();
+  await sql!`insert into reports (at, endpoint_id, outcome, ms, tx, network) values (${r.at}, ${r.endpointId}, ${r.outcome}, ${r.ms ?? null}, ${r.tx ?? null}, ${r.network ?? null})`;
+}
+
+export async function loadReports(max = 100000): Promise<{ at: string; endpointId: string; outcome: string }[]> {
+  await ensureSchema();
+  const rows = await sql!`select at, endpoint_id, outcome from reports order by id desc limit ${max}`;
+  return rows.map((r) => ({ at: new Date(r.at).toISOString(), endpointId: r.endpoint_id, outcome: r.outcome }));
 }

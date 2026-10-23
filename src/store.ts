@@ -1,11 +1,12 @@
 // Durable state on Vercel Blob (private store). Off when BLOB_READ_WRITE_TOKEN is unset (local runs use files).
 //   inventory/latest.json.gz   the inventory, rebuilt daily by /cron/daily
-//   reports/raw/<time>-<id>.json  one object per real-call report (no read-modify-write races between instances)
+//   reports/raw/<time>-<id>.json  one object per real-call report (only without Postgres; with it reports go to the reports table) (no read-modify-write races between instances)
 //   reports/summary.json       per-endpoint {ok, bad} counts; raw reports are folded in daily, then deleted
 import { put, get, list, del } from "@vercel/blob";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { randomBytes } from "node:crypto";
 import type { Endpoint } from "./types.ts";
+import * as history from "./history.ts";
 
 export const enabled = !!process.env.BLOB_READ_WRITE_TOKEN;
 const INVENTORY = "inventory/latest.json.gz";
@@ -41,6 +42,7 @@ export async function loadCounts(): Promise<Counts> {
 }
 
 export async function saveReport(r: StoredReport) {
+  if (history.enabled) return history.insertReport(r);
   await write(`${RAW}${r.at.replace(/[:.]/g, "-")}-${randomBytes(4).toString("hex")}.json`, JSON.stringify(r), "application/json");
 }
 
@@ -76,6 +78,8 @@ export async function compactReports(isOk: (outcome: string) => boolean | null, 
 
 /** Raw reports not yet folded into the summary (read at cold start so recent reports count right away). */
 export async function loadRecentReports(max = 1000): Promise<StoredReport[]> {
+  // With Postgres, reports live there and never in Blob, so no Blob list (an advanced operation) per cold start.
+  if (history.enabled) return (await history.loadReports()) as StoredReport[];
   const page = await list({ prefix: RAW, limit: max });
   const out: StoredReport[] = [];
   for (let i = 0; i < page.blobs.length; i += 20) {
