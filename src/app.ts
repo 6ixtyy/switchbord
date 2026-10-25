@@ -8,7 +8,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Router, outcomeIsOk, type RouteRequest } from "./router.ts";
-import { buildInventory, loadInventory, saveInventory } from "./inventory.ts";
+import { buildInventory, compact, loadInventory, saveInventory } from "./inventory.ts";
 import * as store from "./store.ts";
 import * as history from "./history.ts";
 import * as usage from "./usage.ts";
@@ -33,10 +33,12 @@ let lastStoreCheck = 0;
 export const getRouter = () => router;
 
 async function useEndpoints(endpoints: Router["endpoints"], at: string) {
-  const r = new Router(endpoints);
+  const r = new Router(compact(endpoints));
   if (store.enabled) {
     r.addCounts(await store.loadCounts().catch(() => ({})));
     for (const rep of await store.loadRecentReports().catch(() => [])) r.addReport(rep.endpointId, rep.outcome);
+  } else if (history.enabled) {
+    for (const rep of await history.loadReports().catch(() => [])) r.addReport(rep.endpointId, rep.outcome);
   } else loadReports(r);
   router = r;
   builtAt = at;
@@ -84,6 +86,7 @@ async function saveReport(b: any) {
   const rep = { at: new Date().toISOString(), endpointId: String(b.endpointId), outcome: b.outcome, ms: num(b.ms), tx: b.tx ? String(b.tx).slice(0, 100) : undefined, network: b.network ? String(b.network).slice(0, 60) : undefined };
   router.addReport(rep.endpointId, rep.outcome);
   if (store.enabled) await store.saveReport(rep);
+  else if (history.enabled) await history.insertReport(rep);
   else { mkdirSync(join(REPORTS, ".."), { recursive: true }); appendFileSync(REPORTS, JSON.stringify(rep) + "\n"); }
 }
 
@@ -196,17 +199,19 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       const warnings = facilitators.warningsFor(out.candidates.flatMap((c: any) => c.pay.filter((p: any) => p.rail === "x402").map((p: any) => networkName(p.network))));
       if (warnings.length) out.warnings = warnings;
       history.track(facilitators.snapshot().catch(() => []));
+      // The Index page asks for every market at once; let a CDN in front answer those for 2 minutes instead of the origin.
+      if (req.method === "GET" && r.market && !r.task) res.setHeader("cache-control", "public, max-age=60, s-maxage=120");
       log("route", "http", { task: r.task, market: r.market, mode: out.mode, results: out.candidates.length });
       return send(res, 200, out);
     }
     if (url.pathname === "/facilitators") {
       const list = await facilitators.snapshot();
-      res.setHeader("cache-control", "public, max-age=30");
+      res.setHeader("cache-control", "public, max-age=30, s-maxage=60");
       return send(res, 200, { checkedAt: list[0]?.checkedAt ?? null, slowMs: facilitators.SLOW_MS, facilitators: list, networks: facilitators.byNetwork(list) });
     }
     if (url.pathname === "/dashboard") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(dashboardHtml); }
     if (url.pathname === "/pulse") {
-      res.setHeader("cache-control", "public, max-age=60");
+      res.setHeader("cache-control", "public, max-age=60, s-maxage=60");
       return send(res, 200, await usage.pulse().catch(() => ({ enabled: false })));
     }
     if (url.pathname.startsWith("/badge/")) return badge(res, decodeURIComponent(url.pathname.slice(7)).replace(/\.svg$/, ""));
@@ -229,6 +234,7 @@ export async function handle(req: IncomingMessage, res: ServerResponse) {
       return await transport.handleRequest(req, res, body);
     }
     if (url.pathname === "/markets") log("markets", "http");
+    if (url.pathname === "/markets") res.setHeader("cache-control", "public, max-age=60, s-maxage=300");
     if (url.pathname === "/markets") return send(res, 200, { builtAt, markets: router.markets() });
     if (url.pathname.startsWith("/endpoints/")) {
       const e = router.get(url.pathname.slice("/endpoints/".length));

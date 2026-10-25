@@ -345,7 +345,7 @@ footer{margin-top:56px;border-top:1px solid var(--line);padding-block:20px 40px;
     </div>
     <p class="code-label">paste this into your agent</p>
     <div class="code"><pre id="code-agent" style="white-space:pre-wrap;overflow-wrap:anywhere;padding-right:70px">Before you pay any x402 or MPP API, ask SwitchBord who to call (free, no key).
-MCP: https://switchbord.vercel.app/mcp  ·  or GET https://switchbord.vercel.app/route?task=&lt;what you need&gt;&amp;accepts=x402:base:usdc
+MCP: https://api.switchbord.xyz/mcp  ·  or GET https://api.switchbord.xyz/route?task=&lt;what you need&gt;&amp;accepts=x402:base:usdc
 Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llms.txt</pre><button class="copy" data-copy="code-agent">Copy</button></div>
     <div class="ctas">
       <a class="cmd" href="#demo">try it</a>
@@ -437,13 +437,13 @@ Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llm
       </div>
       <div class="panel" role="tabpanel" id="panel-mcp" aria-labelledby="tab-mcp">
         <p class="code-label">server · streamable http · no auth</p>
-        <div class="code"><pre id="code-mcp-url">https://switchbord.vercel.app/mcp</pre><button class="copy" data-copy="code-mcp-url">Copy</button></div>
+        <div class="code"><pre id="code-mcp-url">https://api.switchbord.xyz/mcp</pre><button class="copy" data-copy="code-mcp-url">Copy</button></div>
         <p class="code-label">client config</p>
         <div class="code"><pre id="code-mcp-json">{
   "mcpServers": {
     "switchbord": {
       "type": "http",
-      "url": "https://switchbord.vercel.app/mcp"
+      "url": "https://api.switchbord.xyz/mcp"
     }
   }
 }</pre><button class="copy" data-copy="code-mcp-json">Copy</button></div>
@@ -455,9 +455,9 @@ Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llm
       </div>
       <div class="panel" role="tabpanel" id="panel-http" aria-labelledby="tab-http" hidden>
         <p class="code-label">find sellers</p>
-        <div class="code"><pre id="code-http-get">curl "https://switchbord.vercel.app/route?task=search%20the%20web&amp;accepts=x402:base:usdc&amp;max_price=0.05"</pre><button class="copy" data-copy="code-http-get">Copy</button></div>
+        <div class="code"><pre id="code-http-get">curl "https://api.switchbord.xyz/route?task=search%20the%20web&amp;accepts=x402:base:usdc&amp;max_price=0.05"</pre><button class="copy" data-copy="code-http-get">Copy</button></div>
         <p class="code-label">report a result · optional</p>
-        <div class="code"><pre id="code-http-post">curl -X POST https://switchbord.vercel.app/report \
+        <div class="code"><pre id="code-http-post">curl -X POST https://api.switchbord.xyz/report \
   -H "content-type: application/json" \
   -d '{"endpointId":"&lt;id&gt;","outcome":"ok","ms":420,"tx":"&lt;tx hash&gt;","network":"eip155:8453"}'</pre><button class="copy" data-copy="code-http-post">Copy</button></div>
       </div>
@@ -476,7 +476,7 @@ Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llm
       <h3>Does SwitchBord handle payments?</h3>
       <p>No. The agent pays the seller directly with its own wallet and x402 or MPP client. SwitchBord never holds, moves or signs for funds.</p>
       <h3>How do I connect an agent?</h3>
-      <p>Add the MCP server <code>https://switchbord.vercel.app/mcp</code> (streamable HTTP, no auth) or call <code>GET https://switchbord.vercel.app/route?task=search%20the%20web</code>. No signup, no keys.</p>
+      <p>Add the MCP server <code>https://api.switchbord.xyz/mcp</code> (streamable HTTP, no auth) or call <code>GET https://api.switchbord.xyz/route?task=search%20the%20web</code>. No signup, no keys.</p>
       <h3>Is it open source?</h3>
       <p>Yes, MIT licensed: <a href="https://github.com/6ixtyy/switchbord">github.com/6ixtyy/switchbord</a>. See also <a href="/llms.txt">llms.txt</a>.</p>
     </div>
@@ -485,8 +485,8 @@ Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llm
   <footer>
     <div class="status"><span class="dot" id="status-dot"></span><span id="status-text">checking api…</span></div>
     <div class="foot-urls">
-      <span>API https://switchbord.vercel.app</span>
-      <span>MCP https://switchbord.vercel.app/mcp</span>
+      <span>API https://api.switchbord.xyz</span>
+      <span>MCP https://api.switchbord.xyz/mcp</span>
       <span class="foot-social"><a href="https://x.com/zaki_6080" target="_blank" rel="noopener">X @zaki_6080</a></span>
     </div>
   </footer>
@@ -494,7 +494,7 @@ Call the top result; if it fails, try the next. Docs: https://switchbord.xyz/llm
 
 <script>
 (function(){
-  const API = "https://switchbord.vercel.app";
+  const API = "https://api.switchbord.xyz";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const marketTitles = {};

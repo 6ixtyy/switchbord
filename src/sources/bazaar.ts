@@ -65,10 +65,12 @@ export async function fetchBazaar(concurrency = 6): Promise<Omit<Endpoint, "id" 
   const first = await page(0);
   const offsets: number[] = [];
   for (let o = PAGE; o < first.total; o += PAGE) offsets.push(o);
-  const items = [...first.items];
+  // Map each page as it arrives: the raw listings are many times bigger than what we keep.
+  const map = (items: any[]) => items.filter((it) => it?.resource).map(toEndpoint);
+  const out = map(first.items);
   for (let i = 0; i < offsets.length; i += concurrency) {
     const pages = await Promise.all(offsets.slice(i, i + concurrency).map(page));
-    for (const p of pages) items.push(...p.items);
+    for (const p of pages) for (const e of map(p.items)) out.push(e);
   }
-  return items.filter((it) => it?.resource).map(toEndpoint);
+  return out;
 }

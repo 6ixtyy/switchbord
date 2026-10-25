@@ -68,7 +68,7 @@ export function record(req: IncomingMessage, e: Omit<UsageEvent, "at" | "ua" | "
   if (!keep) return;
   const ua = req.headers["user-agent"] ? String(req.headers["user-agent"]).slice(0, 120) : null;
   const { mcpClient, ...rest } = e;
-  buffer.push({ ...rest, task: rest.task ? rest.task.slice(0, 200) : null, at: new Date(), ua, client: clientName(ua ?? undefined, mcpClient), visitor: visitor(req), country: (req.headers["x-vercel-ip-country"] as string) ?? null, src: source(req) });
+  buffer.push({ ...rest, task: rest.task ? rest.task.slice(0, 200) : null, at: new Date(), ua, client: clientName(ua ?? undefined, mcpClient), visitor: visitor(req), country: (req.headers["x-vercel-ip-country"] ?? req.headers["x-sb-country"] as string) ?? null, src: source(req) });
   if (buffer.length > MAX_BUFFER) buffer.splice(0, buffer.length - MAX_BUFFER);
 }
 

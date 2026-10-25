@@ -56,8 +56,11 @@ const STOP = new Set("a an and are as at be by for from get i in is it me my of 
 
 export class Router {
   private byMarket = new Map<string, Endpoint[]>();
-  private docs: { e: Endpoint; terms: Map<string, number>; len: number }[] = [];
-  private df = new Map<string, number>();
+  // Inverted index (term -> endpoint positions and counts) instead of a term map per endpoint: far less memory.
+  private postings = new Map<string, { at: number[]; tf: number[] }>();
+  private lens: Int32Array;
+  private avgLen = 1;
+  private idxById = new Map<string, number>();
   private hostPayers = new Map<string, number>();
   private reports = new Map<string, { ok: number; bad: number }>();
 
@@ -80,15 +83,25 @@ export class Router {
   endpoints: Endpoint[];
   constructor(endpoints: Endpoint[]) {
     this.endpoints = endpoints;
-    for (const e of endpoints) {
+    this.lens = new Int32Array(endpoints.length);
+    let total = 0;
+    for (const [i, e] of endpoints.entries()) {
+      this.idxById.set(e.id, i);
       if (e.market) (this.byMarket.get(e.market) ?? this.byMarket.set(e.market, []).get(e.market)!).push(e);
       const terms = new Map<string, number>();
       for (const t of tokens(endpointText(e))) terms.set(t, (terms.get(t) ?? 0) + 1);
       const h = hostOf(e.url);
       this.hostPayers.set(h, Math.max(this.hostPayers.get(h) ?? 0, e.usage?.payers30d ?? 0));
-      for (const t of terms.keys()) this.df.set(t, (this.df.get(t) ?? 0) + 1);
-      this.docs.push({ e, terms, len: [...terms.values()].reduce((a, b) => a + b, 0) });
+      let len = 0;
+      for (const [t, f] of terms) {
+        const p = this.postings.get(t) ?? this.postings.set(t, { at: [], tf: [] }).get(t)!;
+        p.at.push(i); p.tf.push(f);
+        len += f;
+      }
+      this.lens[i] = len;
+      total += len;
     }
+    this.avgLen = total / Math.max(endpoints.length, 1);
   }
 
   markets() {
@@ -99,10 +112,9 @@ export class Router {
     });
   }
 
-  private byId = new Map<string, Endpoint>();
   get(id: string) {
-    if (this.byId.size !== this.endpoints.length) this.byId = new Map(this.endpoints.map((e) => [e.id, e]));
-    return this.byId.get(id);
+    const i = this.idxById.get(id);
+    return i == null ? undefined : this.endpoints[i];
   }
 
   /** BM25 over the whole inventory; used when a task matches no market (or the market is empty after filters). */
@@ -114,23 +126,28 @@ export class Router {
   private scored(task: string, pool?: Endpoint[], n = 40, minCoverage = 0): { e: Endpoint; rel: number }[] {
     const q = [...new Set(tokens(task))];
     if (!q.length) return [];
-    const N = this.docs.length, avg = this.docs.reduce((a, d) => a + d.len, 0) / N;
-    const allowed = pool && new Set(pool.map((e) => e.id));
-    const scored: [number, Endpoint][] = [];
-    for (const d of this.docs) {
-      if (allowed && !allowed.has(d.e.id)) continue;
-      let s = 0, hit = 0;
-      for (const t of q) {
-        const f = d.terms.get(t);
-        if (!f) continue;
-        hit++;
-        const idf = Math.log(1 + (N - this.df.get(t)! + 0.5) / (this.df.get(t)! + 0.5));
-        s += (idf * f * 2.2) / (f + 1.2 * (0.25 + 0.75 * d.len / avg));
+    const N = this.endpoints.length, avg = this.avgLen;
+    const allowed = pool && new Set(pool.map((e) => this.idxById.get(e.id)!));
+    const acc = new Map<number, { s: number; hit: number }>();
+    for (const t of q) {
+      const p = this.postings.get(t);
+      if (!p) continue;
+      const df = p.at.length, idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
+      for (let k = 0; k < df; k++) {
+        const i = p.at[k];
+        if (allowed && !allowed.has(i)) continue;
+        const f = p.tf[k];
+        const a = acc.get(i) ?? acc.set(i, { s: 0, hit: 0 }).get(i)!;
+        a.hit++;
+        a.s += (idf * f * 2.2) / (f + 1.2 * (0.25 + 0.75 * this.lens[i] / avg));
       }
-      const cov = hit / q.length;
-      if (s > 0 && cov >= minCoverage) scored.push([s * (0.4 + 0.6 * cov), d.e]);
     }
-    scored.sort((a, b) => b[0] - a[0]);
+    const scored: [number, Endpoint, number][] = [];
+    for (const [i, { s, hit }] of acc) {
+      const cov = hit / q.length;
+      if (s > 0 && cov >= minCoverage) scored.push([s * (0.4 + 0.6 * cov), this.endpoints[i], i]);
+    }
+    scored.sort((a, b) => b[0] - a[0] || a[2] - b[2]);
     const top = scored[0]?.[0] ?? 1;
     return scored.slice(0, n).map(([sc, e]) => ({ e, rel: sc / top }));
   }
