@@ -44,6 +44,23 @@ export function merge(lists: Omit<Endpoint, "id" | "market">[][]): Endpoint[] {
   return out;
 }
 
+/** One seller can list tens of thousands of templated endpoints (one host held 55k of 86k in 2026-10): that alone
+ *  needs more memory than a small free host has. Keep each host's most-used endpoints, up to SB_MAX_PER_HOST
+ *  (default 1500; 0 = no cap). Decision 0025. */
+export function capPerHost(endpoints: Endpoint[], max = Number(process.env.SB_MAX_PER_HOST ?? 1500)): Endpoint[] {
+  if (!(max > 0)) return endpoints;
+  const host = (e: Endpoint) => { try { return new URL(e.url).host; } catch { return e.url; } };
+  const groups = new Map<string, Endpoint[]>();
+  for (const e of endpoints) (groups.get(host(e)) ?? groups.set(host(e), []).get(host(e))!).push(e);
+  const drop = new Set<Endpoint>();
+  for (const es of groups.values()) {
+    if (es.length <= max) continue;
+    const used = (e: Endpoint) => (e.usage?.payers30d ?? 0) * 1e6 + (e.usage?.calls30d ?? 0);
+    for (const e of [...es].sort((a, b) => used(b) - used(a)).slice(max)) drop.add(e);
+  }
+  return drop.size ? endpoints.filter((e) => !drop.has(e)) : endpoints;
+}
+
 /** A source that failed this time keeps its endpoints from the previous inventory, so one catalog being down
  *  doesn't drop its sellers. They're tagged with the source's name, so they're replaced as soon as it answers again. */
 export async function buildInventory(previous: Endpoint[] = []): Promise<{ endpoints: Endpoint[]; errors: string[]; carried: Record<string, number>; fresh: number }> {
@@ -54,7 +71,7 @@ export async function buildInventory(previous: Endpoint[] = []): Promise<{ endpo
   const carried: Record<string, number> = {};
   const kept = previous.filter((e) => e.sources.some((s) => failed.has(s)));
   for (const name of failed) carried[name] = kept.filter((e) => e.sources.includes(name)).length;
-  return { endpoints: merge([bazaar, mpp, kept]), errors, carried, fresh: bazaar.length + mpp.length };
+  return { endpoints: capPerHost(merge([bazaar, mpp, kept])), errors, carried, fresh: bazaar.length + mpp.length };
 }
 
 /** One JSON object per line (a header, then one endpoint each): loading never holds the whole file as one string,
