@@ -3,7 +3,7 @@
   "name": "io.github.6ixtyy/switchbord",
   "title": "SwitchBord",
   "description": "Free live router for paid agent APIs (x402, MPP): the best working seller for a task, plus backups.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "websiteUrl": "https://switchbord.xyz",
   "repository": {
     "url": "https://github.com/6ixtyy/switchbord",
@@ -16,7 +16,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://switchbord.vercel.app/mcp"
+      "url": "https://api.switchbord.xyz/mcp"
     }
   ]
 }

@@ -1,7 +1,7 @@
 // A dependency-free SwitchBord tool for any agent framework. Node 18+.
 // `findPaidEndpoint(task)` asks SwitchBord who to call; it never pays anyone. Pay the seller with your own x402 or MPP client.
 // `toolDefinitions` are ready-made function-calling schemas (OpenAI-style and Anthropic-style) for the same call.
-const BASE = "https://switchbord.vercel.app";
+const BASE = "https://api.switchbord.xyz";
 
 /** Ask for the working, cheapest, fastest sellers for a task, plus backups. Try candidates in order. */
 export async function findPaidEndpoint(task, { accepts = "x402:base:usdc", maxPrice, limit = 3, base = BASE } = {}) {

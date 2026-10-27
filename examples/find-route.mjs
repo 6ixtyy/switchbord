@@ -1,7 +1,7 @@
 // Ask SwitchBord which sellers to call for a task. Node 18+, no dependencies.
 // Usage: node find-route.mjs "search the web"
 const task = process.argv[2] ?? "search the web";
-const url = new URL("https://switchbord.vercel.app/route");
+const url = new URL("https://api.switchbord.xyz/route");
 url.searchParams.set("task", task);
 url.searchParams.set("accepts", "x402:base:usdc");
 url.searchParams.set("max_price", "0.05");

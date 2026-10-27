@@ -2,14 +2,14 @@
 
 SwitchBord is a remote MCP server: streamable HTTP, stateless, no auth.
 
-**URL:** `https://switchbord.vercel.app/mcp`
+**URL:** `https://api.switchbord.xyz/mcp`
 
 ## Setup by client
 
 **Claude Code**
 
 ```bash
-claude mcp add --transport http switchbord https://switchbord.vercel.app/mcp
+claude mcp add --transport http switchbord https://api.switchbord.xyz/mcp
 ```
 
 Or install it as a Claude Code plugin (same server, updates with this repo):
@@ -30,22 +30,22 @@ gemini extensions install https://github.com/6ixtyy/switchbord
 **Cursor** (`~/.cursor/mcp.json` or `.cursor/mcp.json` in a project):
 
 ```json
-{ "mcpServers": { "switchbord": { "url": "https://switchbord.vercel.app/mcp" } } }
+{ "mcpServers": { "switchbord": { "url": "https://api.switchbord.xyz/mcp" } } }
 ```
 
 **VS Code** (`.vscode/mcp.json`):
 
 ```json
-{ "servers": { "switchbord": { "type": "http", "url": "https://switchbord.vercel.app/mcp" } } }
+{ "servers": { "switchbord": { "type": "http", "url": "https://api.switchbord.xyz/mcp" } } }
 ```
 
 **Other clients** that read an `mcpServers` block:
 
 ```json
-{ "mcpServers": { "switchbord": { "type": "http", "url": "https://switchbord.vercel.app/mcp" } } }
+{ "mcpServers": { "switchbord": { "type": "http", "url": "https://api.switchbord.xyz/mcp" } } }
 ```
 
-Clients that only speak stdio can bridge with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote): `npx mcp-remote https://switchbord.vercel.app/mcp`.
+Clients that only speak stdio can bridge with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote): `npx mcp-remote https://api.switchbord.xyz/mcp`.
 
 ## Tools
 
@@ -60,7 +60,7 @@ Shapes are in [API.md](API.md).
 ## Check it by hand
 
 ```bash
-curl -s -X POST https://switchbord.vercel.app/mcp \
+curl -s -X POST https://api.switchbord.xyz/mcp \
   -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```

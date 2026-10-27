@@ -1,6 +1,6 @@
 # Privacy
 
-SwitchBord is a free router for paid agent APIs. It has no accounts, no sign-in and no API keys, and it never handles payments or wallet keys. This page covers the API and MCP server at `switchbord.vercel.app` and the site at `switchbord.xyz`.
+SwitchBord is a free router for paid agent APIs. It has no accounts, no sign-in and no API keys, and it never handles payments or wallet keys. This page covers the API and MCP server at `api.switchbord.xyz` and the site at `switchbord.xyz`.
 
 ## What we keep
 
@@ -9,11 +9,11 @@ SwitchBord is a free router for paid agent APIs. It has no accounts, no sign-in 
 | Live checks of sellers (which endpoint, up or down, status code, response time, price) | Ranking sellers and measuring how rankings change | Kept as history. These are about sellers, not about you |
 | Reports you choose to send (`report_result` or `POST /report`): endpoint id, outcome, time taken, and optionally a payment tx hash and network | Ranking sellers by real use | Raw reports are folded into per-endpoint counts daily, then deleted |
 
-We don't store the tasks you ask for, and we don't build profiles. The site sets no cookies. It uses Vercel Web Analytics, which counts page views and where visitors came from (referring site, country, device type, and the `?src=` tag on a link if there is one) without cookies and without following you across sites.
+We don't store the tasks you ask for, and we don't build profiles. The site sets no cookies and runs no analytics script of its own.
 
 ## What our host sees
 
-The service runs on Vercel. Like any web host, Vercel processes standard request data (IP address, URL including the task text in a `GET /route` query, user agent, time) to serve and protect the service, and keeps short-lived logs under [its own privacy policy](https://vercel.com/legal/privacy-policy). We use those logs only to debug and to keep the service running.
+The site is served by Cloudflare, and the API runs on Render behind Cloudflare. Like any web host, they process standard request data (IP address, URL including the task text in a `GET /route` query, user agent, time) to serve and protect the service, and keep short-lived logs under their own privacy policies ([Cloudflare](https://www.cloudflare.com/privacypolicy/), [Render](https://render.com/privacy)). We use our own logs only to debug and to keep the service running.
 
 ## Sellers
 

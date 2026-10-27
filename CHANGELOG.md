@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-27
+- The API moved to `https://api.switchbord.xyz` (MCP at `/mcp`). The old `switchbord.vercel.app` address is retired. Site and API now run on free hosting (Cloudflare and Render); the API's memory use dropped by half.
+
 ## 2026-10-15
 - Open source under MIT: the service code (`src/`), the site (`site/`) and build scripts are now published here alongside the docs. Run your own copy with `npm ci && npm run inventory && npm start`.
 - New README with a quick start, a real example answer and a self-hosting guide. Pull requests welcome ([CONTRIBUTING.md](CONTRIBUTING.md)).

@@ -2,8 +2,8 @@
 
 > SwitchBord is a free, live router for paid agent APIs (x402 and MPP). An agent asks for a task in plain words; SwitchBord returns the sellers that are working, cheapest and fastest right now, checked live just before it answers, plus backups. No signup, no keys. SwitchBord never handles payments: the agent pays the seller directly with its own wallet and x402 or MPP client.
 
-- MCP server (streamable HTTP, no auth): https://switchbord.vercel.app/mcp. Tools: `find_paid_endpoint` (task → ranked sellers), `list_markets`, `report_result` (optional).
-- HTTP API base: https://switchbord.vercel.app. Main call: `GET /route?task=<plain words>&accepts=x402:base:usdc&max_price=0.05`.
+- MCP server (streamable HTTP, no auth): https://api.switchbord.xyz/mcp. Tools: `find_paid_endpoint` (task → ranked sellers), `list_markets`, `report_result` (optional).
+- HTTP API base: https://api.switchbord.xyz. Main call: `GET /route?task=<plain words>&accepts=x402:base:usdc&max_price=0.05`.
 - Inventory: 33,000+ paid endpoints from Coinbase Bazaar (x402) and mpp.dev (MPP), rebuilt daily, grouped into markets of interchangeable sellers. If no market fits, `/route` returns the closest single endpoints (`mode: "inventory"`).
 - Each candidate has `url`, `method`, `priceUsd`, `pay[]` (payment options; `label` like `x402:<network>:usdc` or `mpp:<method>`), `input` (the seller's example request; override its fields with your own), `health` (live check) and `charges` (`after_success` for x402: only charged on success; `before_handler` for MPP: charged up front).
 - Open source (MIT): https://github.com/6ixtyy/switchbord. Self-host with Node 22: `npm ci && npm run inventory && npm start`.

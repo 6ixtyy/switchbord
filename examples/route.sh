@@ -2,7 +2,7 @@
 # Ask SwitchBord which sellers to call for a task. Usage: ./route.sh "search the web"
 set -euo pipefail
 TASK="${1:-search the web}"
-curl -sG "https://switchbord.vercel.app/route" \
+curl -sG "https://api.switchbord.xyz/route" \
   --data-urlencode "task=$TASK" \
   --data-urlencode "accepts=x402:base:usdc" \
   --data-urlencode "max_price=0.05" \

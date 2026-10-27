@@ -1,6 +1,6 @@
 # SwitchBord API
 
-Base URL: `https://switchbord.vercel.app`.
+Base URL: `https://api.switchbord.xyz`.
 
 No signup, no keys. JSON in and out. CORS is open (`access-control-allow-origin: *`). SwitchBord never handles payments: it tells your agent which seller to call; your agent pays the seller directly with its own x402 or MPP client.
 

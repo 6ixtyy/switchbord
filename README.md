@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://switchbord.vercel.app/healthz"><img alt="Live endpoints" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fswitchbord.vercel.app%2Fhealthz&query=%24.endpoints&label=live%20endpoints&color=0074a6&style=flat-square"></a>
+  <a href="https://api.switchbord.xyz/healthz"><img alt="Live endpoints" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.switchbord.xyz%2Fhealthz&query=%24.endpoints&label=live%20endpoints&color=0074a6&style=flat-square"></a>
   <a href="https://registry.modelcontextprotocol.io/v0/servers?search=switchbord"><img alt="MCP Registry" src="https://img.shields.io/badge/MCP%20Registry-io.github.6ixtyy%2Fswitchbord-0d1317?style=flat-square"></a>
   <img alt="Protocols: x402 and MPP" src="https://img.shields.io/badge/protocols-x402%20%C2%B7%20MPP-0d1317?style=flat-square">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-0d1317?style=flat-square"></a>
@@ -39,26 +39,26 @@ Agents can now pay for APIs on their own, over **x402** and **MPP**. There are t
 **Claude Code**
 
 ```bash
-claude mcp add --transport http switchbord https://switchbord.vercel.app/mcp
+claude mcp add --transport http switchbord https://api.switchbord.xyz/mcp
 ```
 
 **Cursor, Windsurf, Cline** and any client that reads an `mcpServers` block:
 
 ```json
-{ "mcpServers": { "switchbord": { "type": "http", "url": "https://switchbord.vercel.app/mcp" } } }
+{ "mcpServers": { "switchbord": { "type": "http", "url": "https://api.switchbord.xyz/mcp" } } }
 ```
 
 **Any agent, one paste.** Add this to `CLAUDE.md`, `AGENTS.md` or a system prompt ([more in AGENTS-SNIPPET.md](AGENTS-SNIPPET.md)):
 
 ```
 Before you pay any x402 or MPP API, ask SwitchBord who to call (free, no key).
-MCP: https://switchbord.vercel.app/mcp  or  GET https://switchbord.vercel.app/route?task=<what you need>&accepts=x402:base:usdc
+MCP: https://api.switchbord.xyz/mcp  or  GET https://api.switchbord.xyz/route?task=<what you need>&accepts=x402:base:usdc
 Call the top result; if it fails, try the next.
 ```
 
 Building your own agent? [`integrations/switchbord-tool.mjs`](integrations/switchbord-tool.mjs) is a dependency-free tool with OpenAI-style and Anthropic-style schemas.
 
-**Selling on x402 or MPP?** Show a live badge on your README: `![SwitchBord](https://switchbord.vercel.app/badge/your-host.com.svg)` ([details](AGENTS-SNIPPET.md#sellers-show-you-are-live)).
+**Selling on x402 or MPP?** Show a live badge on your README: `![SwitchBord](https://api.switchbord.xyz/badge/your-host.com.svg)` ([details](AGENTS-SNIPPET.md#sellers-show-you-are-live)).
 
 <details>
 <summary><b>Plugins, Gemini CLI and other clients</b></summary>
@@ -73,7 +73,7 @@ Building your own agent? [`integrations/switchbord-tool.mjs`](integrations/switc
 **Or just call the HTTP API:**
 
 ```bash
-curl "https://switchbord.vercel.app/route?task=search%20the%20web&accepts=x402:base:usdc&max_price=0.05"
+curl "https://api.switchbord.xyz/route?task=search%20the%20web&accepts=x402:base:usdc&max_price=0.05"
 ```
 
 ## What you get back
@@ -156,7 +156,7 @@ SwitchBord does not pay for you, hold funds, or guarantee sellers. To call a pai
 
 ## Run it yourself
 
-The hosted service at `switchbord.vercel.app` runs this code. You can run your own copy with Node 22:
+The hosted service at `api.switchbord.xyz` runs this code. You can run your own copy with Node 22:
 
 ```bash
 git clone https://github.com/6ixtyy/switchbord && cd switchbord

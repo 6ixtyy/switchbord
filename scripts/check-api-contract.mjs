@@ -1,7 +1,7 @@
 // Checks that the live API still returns every field the website (site/index.html) and agents rely on.
 // The contract itself is public/API.md. Read-only: never writes a report.
 //   node scripts/check-api-contract.mjs [baseUrl ...]     (default: both live API addresses)
-const bases = process.argv.slice(2).length ? process.argv.slice(2) : ["https://switchbord.vercel.app"];
+const bases = process.argv.slice(2).length ? process.argv.slice(2) : ["https://api.switchbord.xyz"];
 
 const fails = [];
 const is = {
