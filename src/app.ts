@@ -105,17 +105,27 @@ async function daily(req: IncomingMessage) {
 /** Sample job (hourly, from a GitHub Action): re-check the top 5 sellers of every market and save each market's
  *  order. Open to anyone, but at most once per 10 minutes across instances unless the caller has CRON_SECRET. */
 let lastSample = 0;
-async function sample(req: IncomingMessage) {
-  const secret = process.env.CRON_SECRET;
-  const authorized = !!secret && req.headers.authorization === `Bearer ${secret}`;
-  const last = Math.max(lastSample, (await history.lastSampleAt().catch(() => null))?.getTime() ?? 0);
-  if (!authorized && Date.now() - last < MIN_SAMPLE_GAP_MS) return { skipped: true, lastSampleAt: new Date(last).toISOString() };
-  lastSample = Date.now();
+let sampling = false;
+async function runSample() {
   const t0 = Date.now(), at = new Date();
   const rankings = await router.sample();
   const checks = await history.settle();
   await history.saveRankings(at, rankings);
   return { at: at.toISOString(), markets: rankings.length, checksSaved: checks, historyStore: history.enabled, tookMs: Date.now() - t0 };
+}
+
+/** The job can take longer than a proxy waits (Cloudflare gives up at 100 s) on a small host, so it answers 202 at
+ *  once and finishes in the background; the process stays up because the keep-awake ping hits it every 10 minutes. */
+async function sample(req: IncomingMessage) {
+  const secret = process.env.CRON_SECRET;
+  const authorized = !!secret && req.headers.authorization === `Bearer ${secret}`;
+  const last = Math.max(lastSample, (await history.lastSampleAt().catch(() => null))?.getTime() ?? 0);
+  if (!authorized && Date.now() - last < MIN_SAMPLE_GAP_MS) return { skipped: true, lastSampleAt: new Date(last).toISOString() };
+  if (sampling) return { skipped: true, running: true };
+  lastSample = Date.now();
+  sampling = true;
+  runSample().then((r) => console.log("sample done", JSON.stringify(r)), (e) => console.error("sample failed", e)).finally(() => { sampling = false; });
+  return { started: true, at: new Date(lastSample).toISOString() };
 }
 
 // Remote agent tool: find + report only. Paying needs the agent's own wallet, so that tool exists only in the local MCP.
